@@ -7,7 +7,7 @@ MqttManager::MqttManager() : mqttClient(wifiClient) {
 void MqttManager::begin(const char* server, int port, bool use_tls, const char* ca_cert_path, const char* client_cert_path, const char* client_key_path) {
     _use_tls = use_tls;
     if (strlen(server) == 0) {
-        Log->println("WARNING: MQTT server not configured. MQTT client will not connect.");
+        EspHubLog->println("WARNING: MQTT server not configured. MQTT client will not connect.");
         return;
     }
 
@@ -18,9 +18,9 @@ void MqttManager::begin(const char* server, int port, bool use_tls, const char* 
             if (ca) {
                 wifiClientSecure.setCACert(ca.readString().c_str());
                 ca.close();
-                Log->printf("Loaded CA cert from %s\n", ca_cert_path);
+                EspHubLog->printf("Loaded CA cert from %s\n", ca_cert_path);
             } else {
-                Log->printf("ERROR: Failed to open CA cert file %s\n", ca_cert_path);
+                EspHubLog->printf("ERROR: Failed to open CA cert file %s\n", ca_cert_path);
             }
         }
         if (strlen(client_cert_path) > 0 && strlen(client_key_path) > 0) {
@@ -31,9 +31,9 @@ void MqttManager::begin(const char* server, int port, bool use_tls, const char* 
                 wifiClientSecure.setPrivateKey(client_key.readString().c_str());
                 client_cert.close();
                 client_key.close();
-                Log->printf("Loaded client cert and key from %s and %s\n", client_cert_path, client_key_path);
+                EspHubLog->printf("Loaded client cert and key from %s and %s\n", client_cert_path, client_key_path);
             } else {
-                Log->printf("ERROR: Failed to open client cert/key files %s, %s\n", client_cert_path, client_key_path);
+                EspHubLog->printf("ERROR: Failed to open client cert/key files %s, %s\n", client_cert_path, client_key_path);
             }
         }
         mqttClient.setClient(wifiClientSecure);
@@ -71,7 +71,7 @@ void MqttManager::reconnect() {
         unsigned long currentMillis = millis();
         if (currentMillis - lastReconnectAttempt > reconnectInterval) {
             lastReconnectAttempt = currentMillis;
-            Log->print("Attempting MQTT connection...");
+            EspHubLog->print("Attempting MQTT connection...");
             // Attempt to connect
             bool connected;
             if (_use_tls) {
@@ -81,7 +81,7 @@ void MqttManager::reconnect() {
             }
 
             if (connected) {
-                Log->println("connected");
+                EspHubLog->println("connected");
                 // Once connected, publish an announcement...
                 mqttClient.publish("esphub/status", "online");
                 // ... and resubscribe
@@ -89,11 +89,11 @@ void MqttManager::reconnect() {
                 subscribe("esphub/plc/control");
                 reconnectInterval = 1000; // Reset interval on success
             } else {
-                Log->print("failed, rc=");
-                Log->print(mqttClient.state());
-                Log->print(" retrying in ");
-                Log->print(reconnectInterval / 1000);
-                Log->println(" seconds");
+                EspHubLog->print("failed, rc=");
+                EspHubLog->print(mqttClient.state());
+                EspHubLog->print(" retrying in ");
+                EspHubLog->print(reconnectInterval / 1000);
+                EspHubLog->println(" seconds");
                 // Increase interval exponentially, up to a limit
                 reconnectInterval *= 2;
                 if (reconnectInterval > 60000) reconnectInterval = 60000; // Max 1 minute

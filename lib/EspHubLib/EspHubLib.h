@@ -14,7 +14,7 @@
 #include "MqttDiscoveryManager.h" // New MqttDiscoveryManager
 #include "OtaManager.h" // New OtaManager
 
-extern StreamLogger* Log;
+extern StreamLogger* EspHubLog;
 
 class EspHub {
 public:
@@ -23,6 +23,7 @@ public:
     void loop();
     void setupMesh(const char* password);
     void setupMqtt(const char* server, int port, MQTT_CALLBACK_SIGNATURE, bool use_tls = false, const char* ca_cert_path = "", const char* client_cert_path = "", const char* client_key_path = "");
+    void mqttCallback(char* topic, byte* payload, unsigned int length); // New method for MQTT callback
     void setupTime(const char* tz_info);
     void loadPlcConfiguration(const char* jsonConfig);
     void runPlc(const String& programName);

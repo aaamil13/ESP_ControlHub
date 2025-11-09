@@ -4,8 +4,6 @@
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncWebSocket.h>
-#include <AsyncElegantOTA.h>
-#include "LITTLEFS.h"
 #include "../PlcCore/PlcEngine.h" // For PLC config upload
 #include "MeshDeviceManager.h" // For mesh device monitoring
 

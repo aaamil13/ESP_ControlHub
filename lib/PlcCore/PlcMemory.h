@@ -2,21 +2,30 @@
 #define PLC_MEMORY_H
 
 #include <Arduino.h>
-#include <variant>
 #include <map>
 #include <string>
 
 // Supported data types for our PLC
-using PlcValue = std::variant<bool, uint8_t, int16_t, uint32_t, float, String>;
+enum class PlcValueType {
+    BOOL, BYTE, INT, DINT, REAL, STRING_TYPE // Renamed to avoid conflict with String class
+};
 
-// Enum to map JSON types to our variant
-enum class PlcDataType {
-    BOOL, BYTE, INT, DINT, REAL, STRING
+union PlcValueUnion {
+    bool bVal;
+    uint8_t ui8Val;
+    int16_t i16Val;
+    uint32_t ui32Val;
+    float fVal;
+    char sVal[64]; // Assuming a max string length for union
+
+    // Constructor to initialize union members
+    PlcValueUnion() : bVal(false) {}
 };
 
 struct PlcVariable {
-    PlcValue value;
-    PlcDataType type;
+    PlcValueUnion value;
+    PlcValueType valueType; // To track which member of the union is active
+    PlcValueType type; // Original PlcDataType enum
     bool isRetentive;
     String mesh_link; // Identifier for mesh-linked variables
 };
@@ -26,7 +35,7 @@ public:
     PlcMemory();
     void begin(); // Load retentive memory from NVS
 
-    bool declareVariable(const std::string& name, PlcDataType type, bool isRetentive = false, const String& mesh_link = "");
+    bool declareVariable(const std::string& name, PlcValueType type, bool isRetentive = false, const String& mesh_link = "");
 
     template<typename T>
     bool setValue(const std::string& name, T val);

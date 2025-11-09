@@ -23,14 +23,14 @@ void AppManager::loadApplications(const JsonObject& config) {
                 if (app->configure(app_config, *_plcEngine)) {
                     app->setupWebServer(*_server); // Setup web server routes for this app
                     app_instances.push_back(std::move(app));
-                    Log->printf("Loaded ThermostatApp.\n");
+                    EspHubLog->printf("Loaded ThermostatApp.\n");
                 } else {
-                    Log->printf("ERROR: Failed to configure ThermostatApp.\n");
+                    EspHubLog->printf("ERROR: Failed to configure ThermostatApp.\n");
                 }
             }
             // Add other app types here with else if
 
-            Log->printf("Loading application of type: %s\n", type);
+            EspHubLog->printf("Loading application of type: %s\n", type);
         }
     }
 }

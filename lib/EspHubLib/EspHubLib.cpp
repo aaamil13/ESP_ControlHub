@@ -2,7 +2,7 @@
 #include "mesh_protocol.h" // New mesh protocol header
 #include <WiFi.h>
 
-StreamLogger* Log = nullptr;
+StreamLogger* EspHubLog = nullptr;
 EspHub* EspHub::instance = nullptr;
 
 // Need a forward declaration for the scheduler
@@ -10,7 +10,7 @@ Scheduler meshScheduler;
 
 EspHub::EspHub() : plcEngine(&timeManager, &meshDeviceManager), webManager(&plcEngine, &meshDeviceManager), mqttDiscoveryManager(&mqttManager, &plcEngine), otaManager(), logger(webManager) {
     instance = this;
-    Log = &logger;
+    EspHubLog = &logger;
 }
 
 void EspHub::begin() {
@@ -29,12 +29,12 @@ void EspHub::begin() {
     // mesh.onChangedConnections(&changedConnectionCallback);
     // mesh.onNodeTimeAdjusted(&nodeTimeAdjustedCallback);
 
-    // Log->println("EspHub Library Initialized with painlessMesh");
+    // EspHubLog->println("EspHub Library Initialized with painlessMesh");
 }
 
 void EspHub::setupMesh(const char* password) {
     if (strlen(password) == 0) {
-        Log->println("ERROR: Mesh password is empty. Mesh network will not be started.");
+        EspHubLog->println("ERROR: Mesh password is empty. Mesh network will not be started.");
         return;
     }
     mesh.setDebugMsgTypes(ERROR | STARTUP); // set before init() so that you can see startup messages
@@ -44,12 +44,49 @@ void EspHub::setupMesh(const char* password) {
     mesh.onChangedConnections(&changedConnectionCallback);
     mesh.onNodeTimeAdjusted(&nodeTimeAdjustedCallback);
 
-    Log->println("EspHub Library Initialized with painlessMesh");
+    EspHubLog->println("EspHub Library Initialized with painlessMesh");
 }
 
 void EspHub::setupMqtt(const char* server, int port, MQTT_CALLBACK_SIGNATURE, bool use_tls, const char* ca_cert_path, const char* client_cert_path, const char* client_key_path) {
     mqttManager.begin(server, port, use_tls, ca_cert_path, client_cert_path, client_key_path);
     mqttManager.setCallback(callback);
+}
+
+void EspHub::mqttCallback(char* topic, byte* payload, unsigned int length) {
+    // Handle MQTT messages here, e.g., for OTA updates or PLC control
+    EspHubLog->printf("MQTT message received on topic: %s\n", topic);
+    // Example: Check for OTA update topic
+    if (otaManager.handleMqttMessage(topic, payload, length)) {
+        EspHubLog->println("OTA update initiated via MQTT.");
+        return;
+    }
+
+    // Example: PLC control messages
+    if (String(topic) == "esphub/plc/control") {
+        StaticJsonDocument<200> doc;
+        DeserializationError error = deserializeJson(doc, payload, length);
+        if (error) {
+            EspHubLog->printf("deserializeJson() failed for PLC control message: %s\n", error.c_str());
+            return;
+        }
+        const char* command = doc["command"];
+        const char* programName = doc["program"];
+        if (command && programName) {
+            if (strcmp(command, "run") == 0) {
+                runPlc(programName);
+                EspHubLog->printf("PLC program '%s' started.\n", programName);
+            } else if (strcmp(command, "pause") == 0) {
+                pausePlc(programName);
+                EspHubLog->printf("PLC program '%s' paused.\n", programName);
+            } else if (strcmp(command, "stop") == 0) {
+                stopPlc(programName);
+                EspHubLog->printf("PLC program '%s' stopped.\n", programName);
+            } else if (strcmp(command, "delete") == 0) {
+                deletePlc(programName);
+                EspHubLog->printf("PLC program '%s' deleted.\n", programName);
+            }
+        }
+    }
 }
 
 void EspHub::setupTime(const char* tz_info) {
@@ -67,7 +104,7 @@ void EspHub::loadPlcConfiguration(const char* jsonConfig) {
         if (!error) {
             appManager.loadApplications(doc.as<JsonObject>());
         } else {
-            Log->printf("ERROR: Failed to deserialize PLC config for appManager: %s\n", error.c_str());
+            EspHubLog->printf("ERROR: Failed to deserialize PLC config for appManager: %s\n", error.c_str());
         }
     }
 }
@@ -89,7 +126,7 @@ void EspHub::deletePlc(const String& programName) {
 }
 
 void EspHub::factoryReset() {
-    Log->println("Performing factory reset...");
+    EspHubLog->println("Performing factory reset...");
     // Clear all NVS namespaces
     Preferences preferences;
     preferences.begin("user_manager", false);
@@ -104,12 +141,12 @@ void EspHub::factoryReset() {
     WiFiManager wm;
     wm.resetSettings();
 
-    Log->println("Factory reset complete. Restarting...");
+    EspHubLog->println("Factory reset complete. Restarting...");
     ESP.restart();
 }
 
 void EspHub::restartEsp() {
-    Log->println("Restarting ESP...");
+    EspHubLog->println("Restarting ESP...");
     ESP.restart();
 }
 
@@ -130,7 +167,7 @@ void EspHub::loop() {
 }
 
 void EspHub::receivedCallback(uint32_t from, String &msg) {
-    Log->printf("Received from %u: %s\n", from, msg.c_str());
+    EspHubLog->printf("Received from %u: %s\n", from, msg.c_str());
 
     StaticJsonDocument<512> doc; // Use StaticJsonDocument for mesh messages
     if (parseMeshMessage(msg, doc)) {
@@ -140,7 +177,7 @@ void EspHub::receivedCallback(uint32_t from, String &msg) {
                 // Handle registration
                 const char* device_name = doc["name"].as<const char*>();
                 instance->meshDeviceManager.addDevice(from, device_name);
-                Log->printf("Mesh Registration from %u: Name %s\n", from, device_name);
+                EspHubLog->printf("Mesh Registration from %u: Name %s\n", from, device_name);
                 break;
             }
             case MESH_MSG_TYPE_SENSOR_DATA: {
@@ -157,37 +194,37 @@ void EspHub::receivedCallback(uint32_t from, String &msg) {
                         mainProgram->getMemory().setValue<int16_t>(var_name, doc["value"].as<int>());
                     }
                     instance->meshDeviceManager.updateDeviceLastSeen(from);
-                    Log->printf("Mesh Sensor Data from %u: %s = %s\n", from, var_name, msg.c_str());
+                    EspHubLog->printf("Mesh Sensor Data from %u: %s = %s\n", from, var_name, msg.c_str());
                 } else {
-                    Log->printf("ERROR: Main PLC program not loaded, cannot update sensor data for %s.\n", var_name);
+                    EspHubLog->printf("ERROR: Main PLC program not loaded, cannot update sensor data for %s.\n", var_name);
                 }
                 break;
             }
             case MESH_MSG_TYPE_ACTUATOR_COMMAND: {
                 // This message type would typically be sent *to* a device, not received by the hub
-                Log->printf("Received unexpected ACTUATOR_COMMAND from %u\n", from);
+                EspHubLog->printf("Received unexpected ACTUATOR_COMMAND from %u\n", from);
                 break;
             }
             case MESH_MSG_TYPE_HEARTBEAT: {
                 instance->meshDeviceManager.updateDeviceLastSeen(from);
-                Log->printf("Mesh Heartbeat from %u\n", from);
+                EspHubLog->printf("Mesh Heartbeat from %u\n", from);
                 break;
             }
             default:
-                Log->printf("Received unknown mesh message type from %u\n", from);
+                EspHubLog->printf("Received unknown mesh message type from %u\n", from);
                 break;
         }
     }
 }
 
 void EspHub::newConnectionCallback(uint32_t nodeId) {
-    Log->printf("New Connection, nodeId = %u\n", nodeId);
+    EspHubLog->printf("New Connection, nodeId = %u\n", nodeId);
 }
 
 void EspHub::changedConnectionCallback() {
-    Log->printf("Changed connections\n");
+    EspHubLog->printf("Changed connections\n");
 }
 
 void EspHub::nodeTimeAdjustedCallback(int32_t offset) {
-    Log->printf("Adjusted time %u. Offset = %d\n", instance->mesh.getNodeTime(), offset);
+    EspHubLog->printf("Adjusted time %u. Offset = %d\n", instance->mesh.getNodeTime(), offset);
 }

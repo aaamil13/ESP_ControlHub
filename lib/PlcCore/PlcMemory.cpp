@@ -1,5 +1,8 @@
 #include "PlcMemory.h"
 #include "Preferences.h"
+#include "../../EspHubLib/StreamLogger.h" // Include for EspHubLog
+
+extern StreamLogger* EspHubLog; // Declare EspHubLog
 
 PlcMemory::PlcMemory() {}
 
@@ -7,7 +10,7 @@ void PlcMemory::begin() {
     loadRetentiveMemory();
 }
 
-bool PlcMemory::declareVariable(const std::string& name, PlcDataType type, bool isRetentive, const String& mesh_link) {
+bool PlcMemory::declareVariable(const std::string& name, PlcValueType type, bool isRetentive, const String& mesh_link) {
     if (memoryMap.count(name)) {
         return false; // Variable already exists
     }
@@ -15,14 +18,16 @@ bool PlcMemory::declareVariable(const std::string& name, PlcDataType type, bool 
     newVar.type = type;
     newVar.isRetentive = isRetentive;
     newVar.mesh_link = mesh_link;
+    newVar.valueType = type; // Set the valueType based on PlcValueType
+
     // Initialize with default value
     switch (type) {
-        case PlcDataType::BOOL: newVar.value = false; break;
-        case PlcDataType::BYTE: newVar.value = (uint8_t)0; break;
-        case PlcDataType::INT: newVar.value = (int16_t)0; break;
-        case PlcDataType::DINT: newVar.value = (uint32_t)0; break;
-        case PlcDataType::REAL: newVar.value = 0.0f; break;
-        case PlcDataType::STRING: newVar.value = String(""); break;
+        case PlcValueType::BOOL: newVar.value.bVal = false; break;
+        case PlcValueType::BYTE: newVar.value.ui8Val = (uint8_t)0; break;
+        case PlcValueType::INT: newVar.value.i16Val = (int16_t)0; break;
+        case PlcValueType::DINT: newVar.value.ui32Val = (uint32_t)0; break;
+        case PlcValueType::REAL: newVar.value.fVal = 0.0f; break;
+        case PlcValueType::STRING_TYPE_TYPE: strcpy(newVar.value.sVal, ""); break;
     }
     memoryMap[name] = newVar;
     return true;
@@ -33,12 +38,18 @@ bool PlcMemory::setValue(const std::string& name, T val) {
     if (!memoryMap.count(name)) {
         return false; // Variable not declared
     }
-    try {
-        memoryMap[name].value = val;
-        return true;
-    } catch (const std::bad_variant_access&) {
-        return false; // Type mismatch
+    PlcVariable& var = memoryMap[name];
+    // Check for type mismatch (simplified, as union doesn't enforce this at compile time)
+    // This would ideally involve more robust type checking at runtime or design time
+    switch (var.type) {
+        case PlcValueType::BOOL: var.value.bVal = (bool)val; break;
+        case PlcValueType::BYTE: var.value.ui8Val = (uint8_t)val; break;
+        case PlcValueType::INT: var.value.i16Val = (int16_t)val; break;
+        case PlcValueType::DINT: var.value.ui32Val = (uint32_t)val; break;
+        case PlcValueType::REAL: var.value.fVal = (float)val; break;
+        case PlcValueType::STRING_TYPE_TYPE: strncpy(var.value.sVal, String(val).c_str(), sizeof(var.value.sVal) - 1); var.value.sVal[sizeof(var.value.sVal) - 1] = '\0'; break;
     }
+    return true;
 }
 
 template<typename T>
@@ -46,11 +57,16 @@ T PlcMemory::getValue(const std::string& name, T defaultValue) {
     if (!memoryMap.count(name)) {
         return defaultValue;
     }
-    try {
-        return std::get<T>(memoryMap[name].value);
-    } catch (const std::bad_variant_access&) {
-        return defaultValue; // Type mismatch
+    PlcVariable& var = memoryMap[name];
+    switch (var.type) {
+        case PlcValueType::BOOL: return (T)var.value.bVal;
+        case PlcValueType::BYTE: return (T)var.value.ui8Val;
+        case PlcValueType::INT: return (T)var.value.i16Val;
+        case PlcValueType::DINT: return (T)var.value.ui32Val;
+        case PlcValueType::REAL: return (T)var.value.fVal;
+        case PlcValueType::STRING_TYPE_TYPE: return (T)String(var.value.sVal);
     }
+    return defaultValue; // Should not reach here
 }
 
 void PlcMemory::loadRetentiveMemory() {
@@ -62,25 +78,26 @@ void PlcMemory::loadRetentiveMemory() {
         if (var.isRetentive) {
             String key = String(pair.first.c_str());
             switch (var.type) {
-                case PlcDataType::BOOL:
-                    var.value = preferences.getBool(key.c_str(), std::get<bool>(var.value));
+                case PlcValueType::BOOL:
+                    var.value.bVal = preferences.getBool(key.c_str(), var.value.bVal);
                     break;
-                case PlcDataType::BYTE:
-                    var.value = static_cast<uint8_t>(preferences.getUChar(key.c_str(), std::get<uint8_t>(var.value)));
+                case PlcValueType::BYTE:
+                    var.value.ui8Val = static_cast<uint8_t>(preferences.getUChar(key.c_str(), var.value.ui8Val));
                     break;
-                case PlcDataType::INT:
-                    var.value = static_cast<int16_t>(preferences.getShort(key.c_str(), std::get<int16_t>(var.value)));
+                case PlcValueType::INT:
+                    var.value.i16Val = static_cast<int16_t>(preferences.getShort(key.c_str(), var.value.i16Val));
                     break;
-                case PlcDataType::DINT:
-                    var.value = preferences.getUInt(key.c_str(), std::get<uint32_t>(var.value));
+                case PlcValueType::DINT:
+                    var.value.ui32Val = preferences.getUInt(key.c_str(), var.value.ui32Val);
                     break;
-                case PlcDataType::REAL:
-                    var.value = preferences.getFloat(key.c_str(), std::get<float>(var.value));
+                case PlcValueType::REAL:
+                    var.value.fVal = preferences.getFloat(key.c_str(), var.value.fVal);
                     break;
-                case PlcDataType::STRING: {
+                case PlcValueType::STRING_TYPE_TYPE: {
                     String stored_string = preferences.getString(key.c_str(), "");
                     if (!stored_string.isEmpty()) {
-                        var.value = stored_string;
+                        strncpy(var.value.sVal, stored_string.c_str(), sizeof(var.value.sVal) - 1);
+                        var.value.sVal[sizeof(var.value.sVal) - 1] = '\0';
                     }
                     break;
                 }
@@ -88,7 +105,7 @@ void PlcMemory::loadRetentiveMemory() {
         }
     }
     preferences.end();
-    Log->println("Retentive memory loaded from NVS.");
+    EspHubLog->println("Retentive memory loaded from NVS.");
 }
 
 void PlcMemory::saveRetentiveMemory() {
@@ -100,29 +117,29 @@ void PlcMemory::saveRetentiveMemory() {
         if (var.isRetentive) {
             String key = String(pair.first.c_str());
             switch (var.type) {
-                case PlcDataType::BOOL:
-                    preferences.putBool(key.c_str(), std::get<bool>(var.value));
+                case PlcValueType::BOOL:
+                    preferences.putBool(key.c_str(), var.value.bVal);
                     break;
-                case PlcDataType::BYTE:
-                    preferences.putUChar(key.c_str(), std::get<uint8_t>(var.value));
+                case PlcValueType::BYTE:
+                    preferences.putUChar(key.c_str(), var.value.ui8Val);
                     break;
-                case PlcDataType::INT:
-                    preferences.putShort(key.c_str(), std::get<int16_t>(var.value));
+                case PlcValueType::INT:
+                    preferences.putShort(key.c_str(), var.value.i16Val);
                     break;
-                case PlcDataType::DINT:
-                    preferences.putUInt(key.c_str(), std::get<uint32_t>(var.value));
+                case PlcValueType::DINT:
+                    preferences.putUInt(key.c_str(), var.value.ui32Val);
                     break;
-                case PlcDataType::REAL:
-                    preferences.putFloat(key.c_str(), std::get<float>(var.value));
+                case PlcValueType::REAL:
+                    preferences.putFloat(key.c_str(), var.value.fVal);
                     break;
-                case PlcDataType::STRING:
-                    preferences.putString(key.c_str(), std::get<String>(var.value));
+                case PlcValueType::STRING_TYPE_TYPE:
+                    preferences.putString(key.c_str(), var.value.sVal);
                     break;
             }
         }
     }
     preferences.end();
-    Log->println("Retentive memory saved to NVS.");
+    EspHubLog->println("Retentive memory saved to NVS.");
 }
 
 void PlcMemory::clear() {

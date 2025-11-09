@@ -1,5 +1,6 @@
 #include "PlcProgram.h"
-#include "../../EspHubLib/StreamLogger.h" // For Log
+#include "../../EspHubLib/StreamLogger.h" // For EspHubLog
+extern StreamLogger* EspHubLog; // Declare EspHubLog
 
 // Include all block headers
 #include "blocks/logic/BlockAND.h"
@@ -48,7 +49,7 @@ PlcProgram::PlcProgram(const String& name, TimeManager* timeManager, MeshDeviceM
 
 bool PlcProgram::loadConfiguration(const char* jsonConfig) {
     if (currentState == PlcProgramState::RUNNING) {
-        Log->printf("Cannot load new configuration for program '%s' while it is running. Please stop it first.\n", _name.c_str());
+        EspHubLog->printf("Cannot load new configuration for program '%s' while it is running. Please stop it first.\n", _name.c_str());
         return false;
     }
 
@@ -59,7 +60,7 @@ bool PlcProgram::loadConfiguration(const char* jsonConfig) {
 
     DeserializationError error = deserializeJson(config, jsonConfig);
     if (error) {
-        Log->printf(F("deserializeJson() for PLC program '%s' config failed: %s\n"), _name.c_str(), error.c_str());
+        EspHubLog->printf(F("deserializeJson() for PLC program '%s' config failed: %s\n"), _name.c_str(), error.c_str());
         return false;
     }
 
@@ -77,23 +78,23 @@ bool PlcProgram::loadConfiguration(const char* jsonConfig) {
             bool is_retentive = var_attrs["retentive"] | false;
             String mesh_link = var_attrs["mesh_link"] | "";
             
-            PlcDataType type;
-            if (type_str == "bool") type = PlcDataType::BOOL;
-            else if (type_str == "byte") type = PlcDataType::BYTE;
-            else if (type_str == "int") type = PlcDataType::INT;
-            else if (type_str == "dint") type = PlcDataType::DINT;
-            else if (type_str == "real") type = PlcDataType::REAL;
-            else if (type_str == "string") type = PlcDataType::STRING;
+            PlcValueType type;
+            if (type_str == "bool") type = PlcValueType::BOOL;
+            else if (type_str == "byte") type = PlcValueType::BYTE;
+            else if (type_str == "int") type = PlcValueType::INT;
+            else if (type_str == "dint") type = PlcValueType::DINT;
+            else if (type_str == "real") type = PlcValueType::REAL;
+            else if (type_str == "string") type = PlcValueType::STRING_TYPE;
             else {
-                Log->printf("ERROR: Program '%s': Unknown variable type '%s' for variable '%s'\n", _name.c_str(), type_str.c_str(), var_name);
+                EspHubLog->printf("ERROR: Program '%s': Unknown variable type '%s' for variable '%s'\n", _name.c_str(), type_str.c_str(), var_name);
                 return false;
             }
 
             if (!memory.declareVariable(var_name, type, is_retentive, mesh_link)) {
-                Log->printf("ERROR: Program '%s': Failed to declare variable '%s'\n", _name.c_str(), var_name);
+                EspHubLog->printf("ERROR: Program '%s': Failed to declare variable '%s'\n", _name.c_str(), var_name);
                 return false;
             }
-            Log->printf("Program '%s': Declared variable '%s' of type %s (mesh_link: %s)\n", _name.c_str(), var_name, type_str.c_str(), mesh_link.c_str());
+            EspHubLog->printf("Program '%s': Declared variable '%s' of type %s (mesh_link: %s)\n", _name.c_str(), var_name, type_str.c_str(), mesh_link.c_str());
         }
     }
 
@@ -187,48 +188,48 @@ bool PlcProgram::loadConfiguration(const char* jsonConfig) {
                 if (block->configure(block_cfg, memory)) {
                     logic_blocks.push_back(std::move(block));
                 } else {
-                    Log->printf("ERROR: Program '%s': Failed to configure block of type '%s'\n", _name.c_str(), type);
+                    EspHubLog->printf("ERROR: Program '%s': Failed to configure block of type '%s'\n", _name.c_str(), type);
                     return false;
                 }
             } else {
-                Log->printf("ERROR: Program '%s': Unknown block type '%s'\n", _name.c_str(), type);
+                EspHubLog->printf("ERROR: Program '%s': Unknown block type '%s'\n", _name.c_str(), type);
                 return false;
             }
         }
     }
 
-    Log->printf("PLC program '%s' configuration loaded successfully.\n", _name.c_str());
+    EspHubLog->printf("PLC program '%s' configuration loaded successfully.\n", _name.c_str());
     return true;
 }
 
 void PlcProgram::run() {
     if (currentState == PlcProgramState::RUNNING) {
-        Log->printf("PLC program '%s' is already running.\n", _name.c_str());
+        EspHubLog->printf("PLC program '%s' is already running.\n", _name.c_str());
         return;
     }
     
     executeInitBlock();
 
     currentState = PlcProgramState::RUNNING;
-    Log->printf("PLC program '%s' started.\n", _name.c_str());
+    EspHubLog->printf("PLC program '%s' started.\n", _name.c_str());
 }
 
 void PlcProgram::pause() {
     if (currentState == PlcProgramState::PAUSED) {
-        Log->printf("PLC program '%s' is already paused.\n", _name.c_str());
+        EspHubLog->printf("PLC program '%s' is already paused.\n", _name.c_str());
         return;
     }
     currentState = PlcProgramState::PAUSED;
-    Log->printf("PLC program '%s' paused.\n", _name.c_str());
+    EspHubLog->printf("PLC program '%s' paused.\n", _name.c_str());
 }
 
 void PlcProgram::stop() {
     if (currentState == PlcProgramState::STOPPED) {
-        Log->printf("PLC program '%s' is already stopped.\n", _name.c_str());
+        EspHubLog->printf("PLC program '%s' is already stopped.\n", _name.c_str());
         return;
     }
     currentState = PlcProgramState::STOPPED;
-    Log->printf("PLC program '%s' stopped.\n", _name.c_str());
+    EspHubLog->printf("PLC program '%s' stopped.\n", _name.c_str());
 }
 
 void PlcProgram::evaluate() {
@@ -242,7 +243,7 @@ void PlcProgram::evaluate() {
 
 void PlcProgram::executeInitBlock() {
     if (config.containsKey("init")) {
-        Log->printf("Program '%s': Executing INIT block...\n", _name.c_str());
+        EspHubLog->printf("Program '%s': Executing INIT block...\n", _name.c_str());
         JsonArray init_block = config["init"].as<JsonArray>();
         for (JsonObject action : init_block) {
             const char* action_type = action["action"];
@@ -258,7 +259,7 @@ void PlcProgram::executeInitBlock() {
                 }
                 // Add other types as needed
                 
-                Log->printf("Program '%s': INIT: Set %s\n", _name.c_str(), var_name);
+                EspHubLog->printf("Program '%s': INIT: Set %s\n", _name.c_str(), var_name);
             }
         }
     }

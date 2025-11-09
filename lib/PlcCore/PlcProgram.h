@@ -7,8 +7,8 @@
 #include <memory>
 #include "PlcMemory.h"
 #include "blocks/PlcBlock.h"
-#include "../../EspHubLib/TimeManager.h" // For scheduler blocks
-#include "../../EspHubLib/MeshDeviceManager.h" // For sending commands to mesh devices
+#include "../EspHubLib/TimeManager.h" // For scheduler blocks
+#include "../EspHubLib/MeshDeviceManager.h" // For sending commands to mesh devices
 
 enum class PlcProgramState {
     STOPPED,
@@ -27,6 +27,7 @@ public:
     const String& getName() const { return _name; }
 
     void evaluate(); // Called by PlcEngine
+    PlcMemory& getMemory() { return memory; } // Expose PlcMemory for external access
 
 private:
     String _name;
