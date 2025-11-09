@@ -18,6 +18,7 @@ void EspHub::begin() {
     plcEngine.begin();
     appManager.begin(plcEngine);
     meshDeviceManager.begin(); // Initialize MeshDeviceManager
+    userManager.begin(); // Initialize UserManager
 
     // painlessMesh initialization
     // mesh.setDebugMsgTypes(ERROR | STARTUP); // set before init() so that you can see startup messages
@@ -66,14 +67,45 @@ void EspHub::loadPlcConfiguration(const char* jsonConfig) {
     }
 }
 
-void EspHub::runPlc() {
-    // This method now needs a program name.
-    plcEngine.runProgram("main_program");
+void EspHub::runPlc(const String& programName) {
+    plcEngine.runProgram(programName);
 }
 
-void EspHub::stopPlc() {
-    // This method now needs a program name.
-    plcEngine.stopProgram("main_program");
+void EspHub::pausePlc(const String& programName) {
+    plcEngine.pauseProgram(programName);
+}
+
+void EspHub::stopPlc(const String& programName) {
+    plcEngine.stopProgram(programName);
+}
+
+void EspHub::deletePlc(const String& programName) {
+    plcEngine.deleteProgram(programName);
+}
+
+void EspHub::factoryReset() {
+    Log->println("Performing factory reset...");
+    // Clear all NVS namespaces
+    Preferences preferences;
+    preferences.begin("user_manager", false);
+    preferences.clear();
+    preferences.end();
+
+    preferences.begin("plc_memory", false);
+    preferences.clear();
+    preferences.end();
+
+    // Clear WiFiManager settings
+    WiFiManager wm;
+    wm.resetSettings();
+
+    Log->println("Factory reset complete. Restarting...");
+    ESP.restart();
+}
+
+void EspHub::restartEsp() {
+    Log->println("Restarting ESP...");
+    ESP.restart();
 }
 
 void EspHub::loop() {

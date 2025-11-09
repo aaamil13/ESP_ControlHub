@@ -45,6 +45,12 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     } else if (command == "delete") {
       hub.deletePlc(programName);
     }
+  } else if (strcmp(topic, "esphub/system/control") == 0) {
+    if (strcmp(message, "factory_reset") == 0) {
+      hub.factoryReset();
+    } else if (strcmp(message, "restart") == 0) {
+      hub.restartEsp();
+    }
   }
 }
 
@@ -81,6 +87,33 @@ void setup() {
   // ONLY if it is the root node.
   hub.setupMqtt(mqtt_server, mqtt_port, mqtt_callback, false); // Set to true for MQTTS
   hub.setupTime(tz_info);
+
+  // Check for factory reset button press (e.g., BOOT button on ESP32)
+  // This assumes GPIO0 is connected to the BOOT button and pulled up internally.
+  // Holding it for >5 seconds will trigger a factory reset.
+  // A short press (e.g., <1 second) could trigger a soft restart.
+  pinMode(0, INPUT_PULLUP); 
+  unsigned long buttonPressStartTime = 0;
+  bool buttonPressed = false;
+
+  // This loop runs very quickly, so we need to debounce and measure press time
+  // This is a simplified example, a proper implementation would use a state machine or timer.
+  if (digitalRead(0) == LOW) { // Button is pressed
+    if (!buttonPressed) {
+      buttonPressed = true;
+      buttonPressStartTime = millis();
+    }
+    if (millis() - buttonPressStartTime > 5000) { // Held for 5 seconds
+      hub.factoryReset();
+    }
+  } else {
+    if (buttonPressed) { // Button was just released
+      if (millis() - buttonPressStartTime < 1000) { // Short press (<1 second)
+        hub.restartEsp();
+      }
+      buttonPressed = false;
+    }
+  }
 }
 
 void loop() {

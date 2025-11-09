@@ -10,6 +10,7 @@
 #include "TimeManager.h"
 #include "AppManager.h"
 #include "MeshDeviceManager.h" // New MeshDeviceManager
+#include "UserManager.h" // New UserManager
 
 extern StreamLogger* Log;
 
@@ -22,8 +23,12 @@ public:
     void setupMqtt(const char* server, int port, MQTT_CALLBACK_SIGNATURE, bool use_tls = false);
     void setupTime(const char* tz_info);
     void loadPlcConfiguration(const char* jsonConfig);
-    void runPlc();
-    void stopPlc();
+    void runPlc(const String& programName);
+    void pausePlc(const String& programName);
+    void stopPlc(const String& programName);
+    void deletePlc(const String& programName);
+    void factoryReset();
+    void restartEsp(); // New method for software restart
 
 private:
     painlessMesh mesh;
@@ -33,6 +38,7 @@ private:
     TimeManager timeManager;
     AppManager appManager;
     MeshDeviceManager meshDeviceManager; // New MeshDeviceManager instance
+    UserManager userManager; // New UserManager instance
     StreamLogger logger;
     static EspHub* instance;
 
