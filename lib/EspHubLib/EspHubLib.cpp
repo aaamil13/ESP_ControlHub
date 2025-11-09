@@ -8,7 +8,7 @@ EspHub* EspHub::instance = nullptr;
 // Need a forward declaration for the scheduler
 Scheduler meshScheduler;
 
-EspHub::EspHub() : logger(webManager) {
+EspHub::EspHub() : plcEngine(&timeManager), logger(webManager) {
     instance = this;
     Log = &logger;
 }
@@ -17,10 +17,19 @@ void EspHub::begin() {
     webManager.begin();
     plcEngine.begin();
     appManager.begin(plcEngine);
+
+    // painlessMesh initialization
+    // mesh.setDebugMsgTypes(ERROR | STARTUP); // set before init() so that you can see startup messages
+    // mesh.init("EspHubMesh", "password1234", &meshScheduler, 5566);
+    // mesh.onReceive(&receivedCallback);
+    // mesh.onNewConnection(&newConnectionCallback);
+    // mesh.onChangedConnections(&changedConnectionCallback);
+    // mesh.onNodeTimeAdjusted(&nodeTimeAdjustedCallback);
+
+    // Log->println("EspHub Library Initialized with painlessMesh");
 }
 
 void EspHub::setupMesh(const char* password) {
-    // painlessMesh initialization
     mesh.setDebugMsgTypes(ERROR | STARTUP); // set before init() so that you can see startup messages
     mesh.init("EspHubMesh", password, &meshScheduler, 5566);
     mesh.onReceive(&receivedCallback);

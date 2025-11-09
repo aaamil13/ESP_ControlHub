@@ -1,6 +1,6 @@
-#include "BlockOR.h"
+#include "BlockNAND.h"
 
-bool BlockOR::configure(const JsonObject& config, PlcMemory& memory) {
+bool BlockNAND::configure(const JsonObject& config, PlcMemory& memory) {
     if (config.containsKey("inputs")) {
         JsonObject inputs = config["inputs"];
         for (JsonPair kv : inputs) {
@@ -13,24 +13,24 @@ bool BlockOR::configure(const JsonObject& config, PlcMemory& memory) {
     return true; // Basic validation for now
 }
 
-void BlockOR::evaluate(PlcMemory& memory) {
+void BlockNAND::evaluate(PlcMemory& memory) {
     if (output_var.empty() || input_vars.empty()) {
         return; // Not configured
     }
 
-    bool result = false;
+    bool result = true;
     for (const auto& var_name : input_vars) {
-        if (memory.getValue<bool>(var_name, false)) {
-            result = true;
+        if (!memory.getValue<bool>(var_name, false)) {
+            result = false;
             break;
         }
     }
-    memory.setValue<bool>(output_var, result);
+    memory.setValue<bool>(output_var, !result);
 }
 
-JsonDocument BlockOR::getBlockSchema() {
+JsonDocument BlockNAND::getBlockSchema() {
     JsonDocument schema;
-    schema["description"] = "Logical OR block";
+    schema["description"] = "Logical NAND block";
     schema["inputs"]["in1"]["type"] = "bool";
     schema["inputs"]["in2"]["type"] = "bool";
     schema["outputs"]["out"]["type"] = "bool";

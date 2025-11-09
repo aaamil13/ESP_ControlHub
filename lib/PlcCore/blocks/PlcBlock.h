@@ -7,8 +7,9 @@
 class PlcBlock {
 public:
     virtual ~PlcBlock() {}
-    virtual void configure(const JsonObject& config, PlcMemory& memory) = 0;
+    virtual bool configure(const JsonObject& config, PlcMemory& memory) = 0;
     virtual void evaluate(PlcMemory& memory) = 0;
+    virtual JsonDocument getBlockSchema() = 0; // Returns a JSON schema for validation
 };
 
 #endif // PLC_BLOCK_H

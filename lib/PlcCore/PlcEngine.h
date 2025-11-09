@@ -8,6 +8,7 @@
 #include <esp_task_wdt.h>
 #include <vector>
 #include <memory>
+#include "../../EspHubLib/TimeManager.h" // For scheduler blocks
 
 enum class PlcState {
     STOPPED,
@@ -16,7 +17,7 @@ enum class PlcState {
 
 class PlcEngine {
 public:
-    PlcEngine();
+    PlcEngine(TimeManager* timeManager);
     void begin();
     bool loadConfiguration(const char* jsonConfig);
     void run();
@@ -26,9 +27,11 @@ public:
 private:
     PlcMemory memory;
     std::vector<std::unique_ptr<PlcBlock>> logic_blocks;
+    JsonDocument config;
     PlcState currentState;
     TaskHandle_t plcTaskHandle;
     uint32_t watchdog_timeout_ms;
+    TimeManager* _timeManager;
 
     void executeInitBlock();
     void evaluate();

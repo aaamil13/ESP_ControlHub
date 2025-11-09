@@ -1,6 +1,6 @@
 #include "BlockAND.h"
 
-void BlockAND::configure(const JsonObject& config, PlcMemory& memory) {
+bool BlockAND::configure(const JsonObject& config, PlcMemory& memory) {
     if (config.containsKey("inputs")) {
         JsonObject inputs = config["inputs"];
         for (JsonPair kv : inputs) {
@@ -10,6 +10,7 @@ void BlockAND::configure(const JsonObject& config, PlcMemory& memory) {
     if (config.containsKey("outputs") && config["outputs"].containsKey("out")) {
         output_var = config["outputs"]["out"].as<std::string>();
     }
+    return true; // Basic validation for now
 }
 
 void BlockAND::evaluate(PlcMemory& memory) {
@@ -25,4 +26,13 @@ void BlockAND::evaluate(PlcMemory& memory) {
         }
     }
     memory.setValue<bool>(output_var, result);
+}
+
+JsonDocument BlockAND::getBlockSchema() {
+    JsonDocument schema;
+    schema["description"] = "Logical AND block";
+    schema["inputs"]["in1"]["type"] = "bool";
+    schema["inputs"]["in2"]["type"] = "bool";
+    schema["outputs"]["out"]["type"] = "bool";
+    return schema;
 }

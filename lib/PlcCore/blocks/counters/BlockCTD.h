@@ -7,8 +7,9 @@
 class BlockCTD : public PlcBlock {
 public:
     BlockCTD();
-    void configure(const JsonObject& config, PlcMemory& memory) override;
+    bool configure(const JsonObject& config, PlcMemory& memory) override;
     void evaluate(PlcMemory& memory) override;
+    JsonDocument getBlockSchema() override;
 
 private:
     std::string cd_var;      // Count Down input

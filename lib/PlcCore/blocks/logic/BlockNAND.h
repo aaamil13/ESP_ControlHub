@@ -1,11 +1,11 @@
-#ifndef PLC_BLOCK_OR_H
-#define PLC_BLOCK_OR_H
+#ifndef PLC_BLOCK_NAND_H
+#define PLC_BLOCK_NAND_H
 
 #include "../PlcBlock.h"
 #include <vector>
 #include <string>
 
-class BlockOR : public PlcBlock {
+class BlockNAND : public PlcBlock {
 public:
     bool configure(const JsonObject& config, PlcMemory& memory) override;
     void evaluate(PlcMemory& memory) override;
@@ -16,4 +16,4 @@ private:
     std::string output_var;
 };
 
-#endif // PLC_BLOCK_OR_H
+#endif // PLC_BLOCK_NAND_H

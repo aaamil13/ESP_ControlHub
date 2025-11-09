@@ -1,9 +1,23 @@
 #include "PlcEngine.h"
 #include "blocks/logic/BlockAND.h"
 #include "blocks/logic/BlockOR.h"
+#include "blocks/logic/BlockNOT.h"
+#include "blocks/logic/BlockXOR.h"
 #include "blocks/timers/BlockTON.h"
+#include "blocks/counters/BlockCTU.h"
+#include "blocks/counters/BlockCTD.h"
+#include "blocks/math/BlockADD.h"
+#include "blocks/comparison/BlockGT.h"
+#include "blocks/scheduler/BlockTimeCompare.h"
+#include "blocks/conversion/BlockBoolArrayToInt8.h"
+#include "blocks/conversion/BlockInt8ToInt16.h"
+#include "blocks/conversion/BlockInt8ToUint8.h"
+#include "blocks/conversion/BlockInt16ToUint16.h"
+#include "blocks/conversion/BlockInt32ToTime.h"
+#include "blocks/conversion/BlockInt16ToFloat.h"
+#include "blocks/conversion/BlockInt32ToDouble.h"
 
-PlcEngine::PlcEngine() : currentState(PlcState::STOPPED), plcTaskHandle(NULL), watchdog_timeout_ms(5000) { // Default 5s timeout
+PlcEngine::PlcEngine(TimeManager* timeManager) : currentState(PlcState::STOPPED), plcTaskHandle(NULL), watchdog_timeout_ms(5000), _timeManager(timeManager) { // Default 5s timeout
 }
 
 void PlcEngine::begin() {
@@ -16,7 +30,11 @@ bool PlcEngine::loadConfiguration(const char* jsonConfig) {
         return false;
     }
 
-    JsonDocument config;
+    // Clear previous configuration
+    config.clear();
+    logic_blocks.clear();
+    memory.clear(); // Assuming PlcMemory has a clear method
+
     DeserializationError error = deserializeJson(config, jsonConfig);
     if (error) {
         Log->print(F("deserializeJson() for PLC config failed: "));
@@ -44,38 +62,78 @@ bool PlcEngine::loadConfiguration(const char* jsonConfig) {
             else if (type_str == "dint") type = PlcDataType::DINT;
             else if (type_str == "real") type = PlcDataType::REAL;
             else if (type_str == "string") type = PlcDataType::STRING;
-            else continue; // Skip unknown types
+            else {
+                Log->printf("ERROR: Unknown variable type '%s' for variable '%s'\n", type_str.c_str(), var_name);
+                return false;
+            }
 
-            memory.declareVariable(var_name, type, is_retentive);
+            if (!memory.declareVariable(var_name, type, is_retentive)) {
+                Log->printf("ERROR: Failed to declare variable '%s'\n", var_name);
+                return false;
+            }
             Log->printf("Declared variable '%s' of type %s\n", var_name, type_str.c_str());
         }
     }
 
-    Log->println("PLC configuration loaded successfully.");
-
     // 3. Create and configure logic blocks
-    logic_blocks.clear();
     if (config.containsKey("logic")) {
         JsonArray logic_cfg = config["logic"].as<JsonArray>();
         for (JsonObject block_cfg : logic_cfg) {
             const char* type = block_cfg["block_type"];
+            std::unique_ptr<PlcBlock> block;
+
             if (strcmp(type, "AND") == 0) {
-                auto block = std::make_unique<BlockAND>();
-                block->configure(block_cfg, memory);
-                logic_blocks.push_back(std::move(block));
+                block = std::make_unique<BlockAND>();
             } else if (strcmp(type, "OR") == 0) {
-                auto block = std::make_unique<BlockOR>();
-                block->configure(block_cfg, memory);
-                logic_blocks.push_back(std::move(block));
+                block = std::make_unique<BlockOR>();
+            } else if (strcmp(type, "NOT") == 0) {
+                block = std::make_unique<BlockNOT>();
+            } else if (strcmp(type, "XOR") == 0) {
+                block = std::make_unique<BlockXOR>();
             } else if (strcmp(type, "TON") == 0) {
-                auto block = std::make_unique<BlockTON>();
-                block->configure(block_cfg, memory);
-                logic_blocks.push_back(std::move(block));
+                block = std::make_unique<BlockTON>();
+            } else if (strcmp(type, "CTU") == 0) {
+                block = std::make_unique<BlockCTU>();
+            } else if (strcmp(type, "CTD") == 0) {
+                block = std::make_unique<BlockCTD>();
+            } else if (strcmp(type, "ADD") == 0) {
+                block = std::make_unique<BlockADD>();
+            } else if (strcmp(type, "GT") == 0) {
+                block = std::make_unique<BlockGT>();
+            } else if (strcmp(type, "TIME_COMPARE") == 0) {
+                block = std::make_make_unique<BlockTimeCompare>(_timeManager);
+            } else if (strcmp(type, "BOOL_ARRAY_TO_INT8") == 0) {
+                block = std::make_unique<BlockBoolArrayToInt8>();
+            } else if (strcmp(type, "INT8_TO_INT16") == 0) {
+                block = std::make_unique<BlockInt8ToInt16>();
+            } else if (strcmp(type, "INT8_TO_UINT8") == 0) {
+                block = std::make_unique<BlockInt8ToUint8>();
+            } else if (strcmp(type, "INT16_TO_UINT16") == 0) {
+                block = std::make_unique<BlockInt16ToUint16>();
+            } else if (strcmp(type, "INT32_TO_TIME") == 0) {
+                block = std::make_unique<BlockInt32ToTime>();
+            } else if (strcmp(type, "INT16_TO_FLOAT") == 0) {
+                block = std::make_unique<BlockInt16ToFloat>();
+            } else if (strcmp(type, "INT32_TO_DOUBLE") == 0) {
+                block = std::make_unique<BlockInt32ToDouble>();
             }
             // Add other block types here with else if
+
+            if (block) {
+                if (block->configure(block_cfg, memory)) {
+                    logic_blocks.push_back(std::move(block));
+                } else {
+                    Log->printf("ERROR: Failed to configure block of type '%s'\n", type);
+                    return false;
+                }
+            } else {
+                Log->printf("ERROR: Unknown block type '%s'\n", type);
+                return false;
+            }
         }
     }
 
+    Log->println("PLC configuration loaded successfully.");
     return true;
 }
 
@@ -117,14 +175,6 @@ PlcState PlcEngine::getState() {
 }
 
 void PlcEngine::executeInitBlock() {
-    // This needs the config to be stored as a member, which is not ideal.
-    // Refactoring to pass config to run() might be better.
-    // For now, we assume config is loaded.
-    JsonDocument doc; // A temporary doc to parse the config again.
-    // This is inefficient, the config should be stored.
-    // Let's fix this by making `config` a member of PlcEngine.
-    // It is already a member, so we can use it.
-
     if (config.containsKey("init")) {
         Log->println("Executing INIT block...");
         JsonArray init_block = config["init"].as<JsonArray>();
