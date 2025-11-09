@@ -9,6 +9,7 @@
 #include "StreamLogger.h"
 #include "TimeManager.h"
 #include "AppManager.h"
+#include "MeshDeviceManager.h" // New MeshDeviceManager
 
 extern StreamLogger* Log;
 
@@ -31,6 +32,7 @@ private:
     WebManager webManager;
     TimeManager timeManager;
     AppManager appManager;
+    MeshDeviceManager meshDeviceManager; // New MeshDeviceManager instance
     StreamLogger logger;
     static EspHub* instance;
 

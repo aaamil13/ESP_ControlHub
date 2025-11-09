@@ -8,7 +8,7 @@ EspHub* EspHub::instance = nullptr;
 // Need a forward declaration for the scheduler
 Scheduler meshScheduler;
 
-EspHub::EspHub() : plcEngine(&timeManager), logger(webManager) {
+EspHub::EspHub() : plcEngine(&timeManager, &meshDeviceManager), logger(webManager) {
     instance = this;
     Log = &logger;
 }
@@ -17,6 +17,7 @@ void EspHub::begin() {
     webManager.begin();
     plcEngine.begin();
     appManager.begin(plcEngine);
+    meshDeviceManager.begin(); // Initialize MeshDeviceManager
 
     // painlessMesh initialization
     // mesh.setDebugMsgTypes(ERROR | STARTUP); // set before init() so that you can see startup messages
@@ -87,8 +88,9 @@ void EspHub::receivedCallback(uint32_t from, String &msg) {
         switch (type) {
             case MESH_MSG_TYPE_REGISTRATION: {
                 // Handle registration
-                Log->printf("Mesh Registration from %u: ID %s\n", from, doc["id"].as<const char*>());
-                // Here, we would register the device with its NodeID and associated PLC variables
+                const char* device_name = doc["name"].as<const char*>();
+                instance->meshDeviceManager.addDevice(from, device_name);
+                Log->printf("Mesh Registration from %u: Name %s\n", from, device_name);
                 break;
             }
             case MESH_MSG_TYPE_SENSOR_DATA: {
@@ -101,6 +103,7 @@ void EspHub::receivedCallback(uint32_t from, String &msg) {
                 } else if (doc["value"].is<int>()) {
                     instance->plcEngine.getMemory().setValue<int16_t>(var_name, doc["value"].as<int>());
                 }
+                instance->meshDeviceManager.updateDeviceLastSeen(from);
                 Log->printf("Mesh Sensor Data from %u: %s = %s\n", from, var_name, msg.c_str());
                 break;
             }
@@ -110,7 +113,7 @@ void EspHub::receivedCallback(uint32_t from, String &msg) {
                 break;
             }
             case MESH_MSG_TYPE_HEARTBEAT: {
-                // Update last seen timestamp for the device
+                instance->meshDeviceManager.updateDeviceLastSeen(from);
                 Log->printf("Mesh Heartbeat from %u\n", from);
                 break;
             }

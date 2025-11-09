@@ -38,7 +38,7 @@
 #include "blocks/conversion/BlockInt32ToDouble.h"
 #include "blocks/logic/BlockSequencer.h"
 
-PlcEngine::PlcEngine(TimeManager* timeManager) : currentState(PlcState::STOPPED), plcTaskHandle(NULL), watchdog_timeout_ms(5000), _timeManager(timeManager) { // Default 5s timeout
+PlcEngine::PlcEngine(TimeManager* timeManager, MeshDeviceManager* meshDeviceManager) : currentState(PlcState::STOPPED), plcTaskHandle(NULL), watchdog_timeout_ms(5000), _timeManager(timeManager), _meshDeviceManager(meshDeviceManager) { // Default 5s timeout
 }
 
 void PlcEngine::begin() {

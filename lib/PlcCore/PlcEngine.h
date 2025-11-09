@@ -9,6 +9,7 @@
 #include <vector>
 #include <memory>
 #include "../../EspHubLib/TimeManager.h" // For scheduler blocks
+#include "../../EspHubLib/MeshDeviceManager.h" // For sending commands to mesh devices
 
 enum class PlcState {
     STOPPED,
@@ -17,12 +18,13 @@ enum class PlcState {
 
 class PlcEngine {
 public:
-    PlcEngine(TimeManager* timeManager);
+    PlcEngine(TimeManager* timeManager, MeshDeviceManager* meshDeviceManager);
     void begin();
     bool loadConfiguration(const char* jsonConfig);
     void run();
     void stop();
     PlcState getState();
+    PlcMemory& getMemory() { return memory; } // Expose PlcMemory for external access
 
 private:
     PlcMemory memory;
@@ -32,6 +34,7 @@ private:
     TaskHandle_t plcTaskHandle;
     uint32_t watchdog_timeout_ms;
     TimeManager* _timeManager;
+    MeshDeviceManager* _meshDeviceManager;
 
     void executeInitBlock();
     void evaluate();
