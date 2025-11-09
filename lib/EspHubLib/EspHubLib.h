@@ -11,6 +11,7 @@
 #include "AppManager.h"
 #include "MeshDeviceManager.h" // New MeshDeviceManager
 #include "UserManager.h" // New UserManager
+#include "MqttDiscoveryManager.h" // New MqttDiscoveryManager
 
 extern StreamLogger* Log;
 
@@ -39,6 +40,7 @@ private:
     AppManager appManager;
     MeshDeviceManager meshDeviceManager; // New MeshDeviceManager instance
     UserManager userManager; // New UserManager instance
+    MqttDiscoveryManager mqttDiscoveryManager; // New MqttDiscoveryManager instance
     StreamLogger logger;
     static EspHub* instance;
 

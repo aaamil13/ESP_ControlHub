@@ -8,7 +8,7 @@ EspHub* EspHub::instance = nullptr;
 // Need a forward declaration for the scheduler
 Scheduler meshScheduler;
 
-EspHub::EspHub() : plcEngine(&timeManager, &meshDeviceManager), webManager(&plcEngine, &meshDeviceManager), logger(webManager) {
+EspHub::EspHub() : plcEngine(&timeManager, &meshDeviceManager), webManager(&plcEngine, &meshDeviceManager), mqttDiscoveryManager(&mqttManager, &plcEngine), logger(webManager) {
     instance = this;
     Log = &logger;
 }
@@ -119,6 +119,12 @@ void EspHub::loop() {
     plcEngine.evaluateAllPrograms(); // Evaluate all running PLC programs
     if (mesh.isRoot()) {
         mqttManager.loop();
+        // Publish MQTT Discovery messages periodically
+        static unsigned long lastDiscoveryPublish = 0;
+        if (millis() - lastDiscoveryPublish > 60000) { // Publish every minute
+            mqttDiscoveryManager.publishDiscoveryMessages();
+            lastDiscoveryPublish = millis();
+        }
     }
 }
 
@@ -140,11 +146,11 @@ void EspHub::receivedCallback(uint32_t from, String &msg) {
                 // Update PLC memory with sensor data
                 const char* var_name = doc["var_name"].as<const char*>();
                 if (doc["value"].is<bool>()) {
-                    instance->plcEngine.getMemory().setValue<bool>(var_name, doc["value"].as<bool>());
+                    instance->plcEngine.getProgram("main_program")->getMemory().setValue<bool>(var_name, doc["value"].as<bool>());
                 } else if (doc["value"].is<float>()) {
-                    instance->plcEngine.getMemory().setValue<float>(var_name, doc["value"].as<float>());
+                    instance->plcEngine.getProgram("main_program")->getMemory().setValue<float>(var_name, doc["value"].as<float>());
                 } else if (doc["value"].is<int>()) {
-                    instance->plcEngine.getMemory().setValue<int16_t>(var_name, doc["value"].as<int>());
+                    instance->plcEngine.getProgram("main_program")->getMemory().setValue<int16_t>(var_name, doc["value"].as<int>());
                 }
                 instance->meshDeviceManager.updateDeviceLastSeen(from);
                 Log->printf("Mesh Sensor Data from %u: %s = %s\n", from, var_name, msg.c_str());
