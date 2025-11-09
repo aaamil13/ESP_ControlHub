@@ -32,6 +32,10 @@ void EspHub::begin() {
 }
 
 void EspHub::setupMesh(const char* password) {
+    if (strlen(password) == 0) {
+        Log->println("ERROR: Mesh password is empty. Mesh network will not be started.");
+        return;
+    }
     mesh.setDebugMsgTypes(ERROR | STARTUP); // set before init() so that you can see startup messages
     mesh.init("EspHubMesh", password, &meshScheduler, 5566);
     mesh.onReceive(&receivedCallback);

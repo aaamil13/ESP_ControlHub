@@ -7,7 +7,7 @@
 const char* mqtt_server = "YOUR_MQTT_BROKER_IP";
 const int mqtt_port = 1883;
 char tz_info[64] = "EET-2EEST,M3.5.0/3,M10.5.0/4"; // Default to Europe/Sofia
-char mesh_password[64] = "password1234"; // Default mesh password
+char mesh_password[64] = ""; // Mesh password, will be configured via WiFiManager
 // -----------------------------------
 
 EspHub hub;
@@ -76,15 +76,21 @@ void setup() {
   // Save the custom parameters
   strcpy(tz_info, custom_tz.getValue());
   strcpy(mesh_password, custom_mesh_pass.getValue());
-  // Here you would save tz_info and mesh_password to NVS for persistence
+  // TODO: Save tz_info and mesh_password to NVS for persistence
 
   Log->println("\nWiFi connected");
   Log->printf("Timezone: %s\n", tz_info);
   Log->printf("Mesh Password: %s\n", mesh_password);
 
-  hub.setupMesh(mesh_password);
+  if (strlen(mesh_password) > 0) {
+    hub.setupMesh(mesh_password);
+  } else {
+    Log->println("WARNING: Mesh password not set. Mesh network will not be started.");
+  }
+  
   // The mesh will attempt to connect to the MQTT broker
   // ONLY if it is the root node.
+  // TODO: Add MQTT username/password to WiFiManager config
   hub.setupMqtt(mqtt_server, mqtt_port, mqtt_callback, false); // Set to true for MQTTS
   hub.setupTime(tz_info);
 

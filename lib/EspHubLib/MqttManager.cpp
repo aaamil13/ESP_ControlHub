@@ -5,6 +5,11 @@ MqttManager::MqttManager() : mqttClient(wifiClient) {
 
 void MqttManager::begin(const char* server, int port, bool use_tls) {
     _use_tls = use_tls;
+    if (strlen(server) == 0) {
+        Log->println("WARNING: MQTT server not configured. MQTT client will not connect.");
+        return;
+    }
+
     if (_use_tls) {
         // Configure for MQTTS
         // In a real application, you would load CA cert, client cert, and private key here.
