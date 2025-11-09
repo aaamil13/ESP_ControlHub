@@ -51,6 +51,8 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     } else if (strcmp(message, "restart") == 0) {
       hub.restartEsp();
     }
+  } else if (strcmp(topic, "esphub/ota/update") == 0) {
+    hub.mqttCallback(topic, payload, length); // Forward to EspHub for OTA handling
   }
 }
 

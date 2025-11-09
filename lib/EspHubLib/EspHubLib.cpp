@@ -8,7 +8,7 @@ EspHub* EspHub::instance = nullptr;
 // Need a forward declaration for the scheduler
 Scheduler meshScheduler;
 
-EspHub::EspHub() : plcEngine(&timeManager, &meshDeviceManager), webManager(&plcEngine, &meshDeviceManager), mqttDiscoveryManager(&mqttManager, &plcEngine), logger(webManager) {
+EspHub::EspHub() : plcEngine(&timeManager, &meshDeviceManager), webManager(&plcEngine, &meshDeviceManager), mqttDiscoveryManager(&mqttManager, &plcEngine), otaManager(), logger(webManager) {
     instance = this;
     Log = &logger;
 }
@@ -19,6 +19,7 @@ void EspHub::begin() {
     appManager.begin(plcEngine, webManager.getServer()); // Pass webManager's server
     meshDeviceManager.begin(); // Initialize MeshDeviceManager
     userManager.begin(); // Initialize UserManager
+    otaManager.begin(); // Initialize OtaManager
 
     // painlessMesh initialization
     // mesh.setDebugMsgTypes(ERROR | STARTUP); // set before init() so that you can see startup messages
