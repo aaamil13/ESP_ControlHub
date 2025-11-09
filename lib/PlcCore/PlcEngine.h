@@ -27,7 +27,7 @@ public:
 private:
     PlcMemory memory;
     std::vector<std::unique_ptr<PlcBlock>> logic_blocks;
-    JsonDocument config;
+    StaticJsonDocument<4096> config; // Max 4KB for PLC config
     PlcState currentState;
     TaskHandle_t plcTaskHandle;
     uint32_t watchdog_timeout_ms;

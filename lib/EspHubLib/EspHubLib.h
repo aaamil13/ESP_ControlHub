@@ -18,7 +18,7 @@ public:
     void begin();
     void loop();
     void setupMesh(const char* password);
-    void setupMqtt(const char* server, int port, MQTT_CALLBACK_SIGNATURE);
+    void setupMqtt(const char* server, int port, MQTT_CALLBACK_SIGNATURE, bool use_tls = false);
     void setupTime(const char* tz_info);
     void loadPlcConfiguration(const char* jsonConfig);
     void runPlc();

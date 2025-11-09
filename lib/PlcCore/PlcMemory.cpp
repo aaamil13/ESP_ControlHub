@@ -60,6 +60,10 @@ void PlcMemory::saveRetentiveMemory() {
     // TODO: Save retentive variables to NVS
 }
 
+void PlcMemory::clear() {
+    memoryMap.clear();
+}
+
 // Explicit template instantiations
 template bool PlcMemory::setValue<bool>(const std::string& name, bool val);
 template bool PlcMemory::setValue<uint8_t>(const std::string& name, uint8_t val);

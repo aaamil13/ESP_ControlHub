@@ -3,11 +3,31 @@
 #include "blocks/logic/BlockOR.h"
 #include "blocks/logic/BlockNOT.h"
 #include "blocks/logic/BlockXOR.h"
+#include "blocks/logic/BlockNAND.h"
+#include "blocks/logic/BlockNOR.h"
+#include "blocks/logic/BlockSR.h"
+#include "blocks/logic/BlockRS.h"
 #include "blocks/timers/BlockTON.h"
+#include "blocks/timers/BlockTOF.h"
+#include "blocks/timers/BlockTP.h"
 #include "blocks/counters/BlockCTU.h"
 #include "blocks/counters/BlockCTD.h"
+#include "blocks/counters/BlockCTUD.h"
 #include "blocks/math/BlockADD.h"
+#include "blocks/math/BlockSUB.h"
+#include "blocks/math/BlockMUL.h"
+#include "blocks/math/BlockDIV.h"
+#include "blocks/math/BlockMOD.h"
+#include "blocks/math/BlockABS.h"
+#include "blocks/math/BlockSQRT.h"
+#include "blocks/math/BlockINC.h"
+#include "blocks/math/BlockDEC.h"
 #include "blocks/comparison/BlockGT.h"
+#include "blocks/comparison/BlockEQ.h"
+#include "blocks/comparison/BlockNE.h"
+#include "blocks/comparison/BlockLT.h"
+#include "blocks/comparison/BlockGE.h"
+#include "blocks/comparison/BlockLE.h"
 #include "blocks/scheduler/BlockTimeCompare.h"
 #include "blocks/conversion/BlockBoolArrayToInt8.h"
 #include "blocks/conversion/BlockInt8ToInt16.h"
@@ -16,6 +36,7 @@
 #include "blocks/conversion/BlockInt32ToTime.h"
 #include "blocks/conversion/BlockInt16ToFloat.h"
 #include "blocks/conversion/BlockInt32ToDouble.h"
+#include "blocks/logic/BlockSequencer.h"
 
 PlcEngine::PlcEngine(TimeManager* timeManager) : currentState(PlcState::STOPPED), plcTaskHandle(NULL), watchdog_timeout_ms(5000), _timeManager(timeManager) { // Default 5s timeout
 }
@@ -90,18 +111,58 @@ bool PlcEngine::loadConfiguration(const char* jsonConfig) {
                 block = std::make_unique<BlockNOT>();
             } else if (strcmp(type, "XOR") == 0) {
                 block = std::make_unique<BlockXOR>();
+            } else if (strcmp(type, "NAND") == 0) {
+                block = std::make_unique<BlockNAND>();
+            } else if (strcmp(type, "NOR") == 0) {
+                block = std::make_unique<BlockNOR>();
+            } else if (strcmp(type, "SR") == 0) {
+                block = std::make_unique<BlockSR>();
+            } else if (strcmp(type, "RS") == 0) {
+                block = std::make_unique<BlockRS>();
             } else if (strcmp(type, "TON") == 0) {
                 block = std::make_unique<BlockTON>();
+            } else if (strcmp(type, "TOF") == 0) {
+                block = std::make_unique<BlockTOF>();
+            } else if (strcmp(type, "TP") == 0) {
+                block = std::make_unique<BlockTP>();
             } else if (strcmp(type, "CTU") == 0) {
                 block = std::make_unique<BlockCTU>();
             } else if (strcmp(type, "CTD") == 0) {
                 block = std::make_unique<BlockCTD>();
+            } else if (strcmp(type, "CTUD") == 0) {
+                block = std::make_unique<BlockCTUD>();
             } else if (strcmp(type, "ADD") == 0) {
                 block = std::make_unique<BlockADD>();
+            } else if (strcmp(type, "SUB") == 0) {
+                block = std::make_unique<BlockSUB>();
+            } else if (strcmp(type, "MUL") == 0) {
+                block = std::make_unique<BlockMUL>();
+            } else if (strcmp(type, "DIV") == 0) {
+                block = std::make_unique<BlockDIV>();
+            } else if (strcmp(type, "MOD") == 0) {
+                block = std::make_unique<BlockMOD>();
+            } else if (strcmp(type, "ABS") == 0) {
+                block = std::make_unique<BlockABS>();
+            } else if (strcmp(type, "SQRT") == 0) {
+                block = std::make_unique<BlockSQRT>();
+            } else if (strcmp(type, "INC") == 0) {
+                block = std::make_unique<BlockINC>();
+            } else if (strcmp(type, "DEC") == 0) {
+                block = std::make_unique<BlockDEC>();
             } else if (strcmp(type, "GT") == 0) {
                 block = std::make_unique<BlockGT>();
+            } else if (strcmp(type, "EQ") == 0) {
+                block = std::make_unique<BlockEQ>();
+            } else if (strcmp(type, "NE") == 0) {
+                block = std::make_unique<BlockNE>();
+            } else if (strcmp(type, "LT") == 0) {
+                block = std::make_unique<BlockLT>();
+            } else if (strcmp(type, "GE") == 0) {
+                block = std::make_unique<BlockGE>();
+            } else if (strcmp(type, "LE") == 0) {
+                block = std::make_unique<BlockLE>();
             } else if (strcmp(type, "TIME_COMPARE") == 0) {
-                block = std::make_make_unique<BlockTimeCompare>(_timeManager);
+                block = std::make_unique<BlockTimeCompare>(_timeManager);
             } else if (strcmp(type, "BOOL_ARRAY_TO_INT8") == 0) {
                 block = std::make_unique<BlockBoolArrayToInt8>();
             } else if (strcmp(type, "INT8_TO_INT16") == 0) {
@@ -116,6 +177,8 @@ bool PlcEngine::loadConfiguration(const char* jsonConfig) {
                 block = std::make_unique<BlockInt16ToFloat>();
             } else if (strcmp(type, "INT32_TO_DOUBLE") == 0) {
                 block = std::make_unique<BlockInt32ToDouble>();
+            } else if (strcmp(type, "SEQUENCER") == 0) {
+                block = std::make_unique<BlockSequencer>();
             }
             // Add other block types here with else if
 
@@ -187,7 +250,10 @@ void PlcEngine::executeInitBlock() {
                     memory.setValue<bool>(var_name, action["value"].as<bool>());
                 } else if (action["value"].is<float>()) {
                     memory.setValue<float>(var_name, action["value"].as<float>());
-                } // ... and so on for other types
+                } else if (action["value"].is<int>()) {
+                    memory.setValue<int16_t>(var_name, action["value"].as<int>());
+                }
+                // Add other types as needed
                 
                 Log->printf("INIT: Set %s\n", var_name);
             }

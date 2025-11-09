@@ -64,7 +64,7 @@ void setup() {
   hub.setupMesh(mesh_password);
   // The mesh will attempt to connect to the MQTT broker
   // ONLY if it is the root node.
-  hub.setupMqtt(mqtt_server, mqtt_port, mqtt_callback);
+  hub.setupMqtt(mqtt_server, mqtt_port, mqtt_callback, false); // Set to true for MQTTS
   hub.setupTime(tz_info);
 }
 

@@ -34,6 +34,7 @@ public:
     T getValue(const std::string& name, T defaultValue = T{});
 
     void saveRetentiveMemory();
+    void clear();
 
 private:
     std::map<std::string, PlcVariable> memoryMap;
