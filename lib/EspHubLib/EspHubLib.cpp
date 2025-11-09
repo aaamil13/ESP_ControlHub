@@ -47,8 +47,8 @@ void EspHub::setupMesh(const char* password) {
     Log->println("EspHub Library Initialized with painlessMesh");
 }
 
-void EspHub::setupMqtt(const char* server, int port, MQTT_CALLBACK_SIGNATURE, bool use_tls) {
-    mqttManager.begin(server, port, use_tls);
+void EspHub::setupMqtt(const char* server, int port, MQTT_CALLBACK_SIGNATURE, bool use_tls, const char* ca_cert_path, const char* client_cert_path, const char* client_key_path) {
+    mqttManager.begin(server, port, use_tls, ca_cert_path, client_cert_path, client_key_path);
     mqttManager.setCallback(callback);
 }
 

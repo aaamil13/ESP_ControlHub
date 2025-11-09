@@ -9,7 +9,7 @@
 class MqttManager {
 public:
     MqttManager();
-    void begin(const char* server, int port, bool use_tls = false);
+    void begin(const char* server, int port, bool use_tls = false, const char* ca_cert_path = "", const char* client_cert_path = "", const char* client_key_path = "");
     void loop();
     void setCallback(MQTT_CALLBACK_SIGNATURE);
     void publish(const char* topic, const char* payload);

@@ -1,9 +1,10 @@
 #include "MqttManager.h"
+#include "LITTLEFS.h" // For loading certificates
 
 MqttManager::MqttManager() : mqttClient(wifiClient) {
 }
 
-void MqttManager::begin(const char* server, int port, bool use_tls) {
+void MqttManager::begin(const char* server, int port, bool use_tls, const char* ca_cert_path, const char* client_cert_path, const char* client_key_path) {
     _use_tls = use_tls;
     if (strlen(server) == 0) {
         Log->println("WARNING: MQTT server not configured. MQTT client will not connect.");
@@ -11,12 +12,30 @@ void MqttManager::begin(const char* server, int port, bool use_tls) {
     }
 
     if (_use_tls) {
-        // Configure for MQTTS
-        // In a real application, you would load CA cert, client cert, and private key here.
-        // For example:
-        // wifiClientSecure.setCACert(ca_cert);
-        // wifiClientSecure.setCertificate(client_cert);
-        // wifiClientSecure.setPrivateKey(private_key);
+        // Load certificates from LittleFS
+        if (strlen(ca_cert_path) > 0) {
+            File ca = LITTLEFS.open(ca_cert_path, "r");
+            if (ca) {
+                wifiClientSecure.setCACert(ca.readString().c_str());
+                ca.close();
+                Log->printf("Loaded CA cert from %s\n", ca_cert_path);
+            } else {
+                Log->printf("ERROR: Failed to open CA cert file %s\n", ca_cert_path);
+            }
+        }
+        if (strlen(client_cert_path) > 0 && strlen(client_key_path) > 0) {
+            File client_cert = LITTLEFS.open(client_cert_path, "r");
+            File client_key = LITTLEFS.open(client_key_path, "r");
+            if (client_cert && client_key) {
+                wifiClientSecure.setCertificate(client_cert.readString().c_str());
+                wifiClientSecure.setPrivateKey(client_key.readString().c_str());
+                client_cert.close();
+                client_key.close();
+                Log->printf("Loaded client cert and key from %s and %s\n", client_cert_path, client_key_path);
+            } else {
+                Log->printf("ERROR: Failed to open client cert/key files %s, %s\n", client_cert_path, client_key_path);
+            }
+        }
         mqttClient.setClient(wifiClientSecure);
     } else {
         mqttClient.setClient(wifiClient);

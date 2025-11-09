@@ -8,6 +8,9 @@ const char* mqtt_server = "YOUR_MQTT_BROKER_IP";
 const int mqtt_port = 1883;
 char tz_info[64] = "EET-2EEST,M3.5.0/3,M10.5.0/4"; // Default to Europe/Sofia
 char mesh_password[64] = ""; // Mesh password, will be configured via WiFiManager
+char mqtt_ca_cert_path[64] = ""; // Path to CA certificate in LittleFS
+char mqtt_client_cert_path[64] = ""; // Path to client certificate in LittleFS
+char mqtt_client_key_path[64] = ""; // Path to client private key in LittleFS
 // -----------------------------------
 
 EspHub hub;
@@ -52,6 +55,7 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
       hub.restartEsp();
     }
   } else if (strcmp(topic, "esphub/ota/update") == 0) {
+    // The payload should be the URL of the firmware file
     hub.mqttCallback(topic, payload, length); // Forward to EspHub for OTA handling
   }
 }
@@ -67,8 +71,14 @@ void setup() {
   
   WiFiManagerParameter custom_tz("tz", "Timezone String", tz_info, sizeof(tz_info));
   WiFiManagerParameter custom_mesh_pass("mesh_pass", "Mesh Password", mesh_password, sizeof(mesh_password));
+  WiFiManagerParameter custom_mqtt_ca("mqtt_ca", "MQTT CA Cert Path", mqtt_ca_cert_path, sizeof(mqtt_ca_cert_path));
+  WiFiManagerParameter custom_mqtt_client_cert("mqtt_client_cert", "MQTT Client Cert Path", mqtt_client_cert_path, sizeof(mqtt_client_cert_path));
+  WiFiManagerParameter custom_mqtt_client_key("mqtt_client_key", "MQTT Client Key Path", mqtt_client_key_path, sizeof(mqtt_client_key_path));
   wm.addParameter(&custom_tz);
   wm.addParameter(&custom_mesh_pass);
+  wm.addParameter(&custom_mqtt_ca);
+  wm.addParameter(&custom_mqtt_client_cert);
+  wm.addParameter(&custom_mqtt_client_key);
 
   if (!wm.autoConnect("EspHub-Config")) {
     Log->println("Failed to connect and hit timeout");
@@ -78,11 +88,17 @@ void setup() {
   // Save the custom parameters
   strcpy(tz_info, custom_tz.getValue());
   strcpy(mesh_password, custom_mesh_pass.getValue());
-  // TODO: Save tz_info and mesh_password to NVS for persistence
+  strcpy(mqtt_ca_cert_path, custom_mqtt_ca.getValue());
+  strcpy(mqtt_client_cert_path, custom_mqtt_client_cert.getValue());
+  strcpy(mqtt_client_key_path, custom_mqtt_client_key.getValue());
+  // TODO: Save all these parameters to NVS for persistence
 
   Log->println("\nWiFi connected");
   Log->printf("Timezone: %s\n", tz_info);
   Log->printf("Mesh Password: %s\n", mesh_password);
+  Log->printf("MQTT CA Cert Path: %s\n", mqtt_ca_cert_path);
+  Log->printf("MQTT Client Cert Path: %s\n", mqtt_client_cert_path);
+  Log->printf("MQTT Client Key Path: %s\n", mqtt_client_key_path);
 
   if (strlen(mesh_password) > 0) {
     hub.setupMesh(mesh_password);
@@ -93,7 +109,8 @@ void setup() {
   // The mesh will attempt to connect to the MQTT broker
   // ONLY if it is the root node.
   // TODO: Add MQTT username/password to WiFiManager config
-  hub.setupMqtt(mqtt_server, mqtt_port, mqtt_callback, false); // Set to true for MQTTS
+  bool use_tls = (strlen(mqtt_ca_cert_path) > 0 && strlen(mqtt_client_cert_path) > 0 && strlen(mqtt_client_key_path) > 0);
+  hub.setupMqtt(mqtt_server, mqtt_port, mqtt_callback, use_tls, mqtt_ca_cert_path, mqtt_client_cert_path, mqtt_client_key_path);
   hub.setupTime(tz_info);
 
   // Check for factory reset button press (e.g., BOOT button on ESP32)
