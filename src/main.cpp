@@ -22,6 +22,12 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
 
   if (strcmp(topic, "esphub/config/plc") == 0) {
     hub.loadPlcConfiguration(message);
+  } else if (strcmp(topic, "esphub/plc/control") == 0) {
+    if (strcmp(message, "run") == 0) {
+      hub.runPlc();
+    } else if (strcmp(message, "stop") == 0) {
+      hub.stopPlc();
+    }
   }
 }
 

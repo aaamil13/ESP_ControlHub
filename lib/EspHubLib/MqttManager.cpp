@@ -37,6 +37,7 @@ void MqttManager::reconnect() {
             mqttClient.publish("esphub/status", "online");
             // ... and resubscribe
             subscribe("esphub/config/plc");
+            subscribe("esphub/plc/control");
         } else {
             Log->print("failed, rc=");
             Log->print(mqttClient.state());

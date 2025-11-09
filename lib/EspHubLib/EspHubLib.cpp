@@ -5,6 +5,9 @@
 StreamLogger* Log = nullptr;
 EspHub* EspHub::instance = nullptr;
 
+// Need a forward declaration for the scheduler
+Scheduler meshScheduler;
+
 EspHub::EspHub() : logger(webManager) {
     instance = this;
     Log = &logger;
@@ -15,72 +18,52 @@ void EspHub::begin() {
     webManager.begin();
     plcEngine.begin();
 
-    // Set device as a Wi-Fi Station
-    WiFi.mode(WIFI_STA);
+    // painlessMesh initialization
+    mesh.setDebugMsgTypes(ERROR | STARTUP); // set before init() so that you can see startup messages
+    mesh.init("EspHubMesh", "password1234", &meshScheduler, 5566);
+    mesh.onReceive(&receivedCallback);
+    mesh.onNewConnection(&newConnectionCallback);
+    mesh.onChangedConnections(&changedConnectionCallback);
+    mesh.onNodeTimeAdjusted(&nodeTimeAdjustedCallback);
 
-    // Init ESP-NOW
-    if (esp_now_init() != ESP_OK) {
-        Log->println("Error initializing ESP-NOW");
-        return;
-    }
-
-    // Register for recv CB to get recv packer info
-    esp_now_register_recv_cb(OnDataRecv);
-    esp_now_register_send_cb(OnDataSent);
-
-    Log->println("EspHub Library Initialized with ESP-NOW");
-}
-
-void EspHub::setupMqtt(const char* server, int port, MQTT_CALLBACK_SIGNATURE) {
-    mqttManager.begin(server, port);
-    mqttManager.setCallback(callback);
+    Log->println("EspHub Library Initialized with painlessMesh");
 }
 
 void EspHub::loadPlcConfiguration(const char* jsonConfig) {
     plcEngine.loadConfiguration(jsonConfig);
 }
 
+void EspHub::runPlc() {
+    plcEngine.run();
+}
+
+void EspHub::stopPlc() {
+    plcEngine.stop();
+}
+
 void EspHub::loop() {
+    mesh.update();
     mqttManager.loop();
-    plcEngine.evaluate();
 }
 
-void EspHub::OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
-    if (instance == nullptr) return;
+void EspHub::receivedCallback(uint32_t from, String &msg) {
+    Log->printf("Received from %u: %s\n", from, msg.c_str());
 
-    message_type_t type = ((message_type_t *)incomingData)[0];
-    
-    Log->print("Packet received from: ");
-    for (int i = 0; i < 6; i++) {
-        Log->print(mac[i], HEX);
-        if (i < 5) Log->print(":");
-    }
-    Log->println();
-
-    switch (type) {
-        case MESSAGE_TYPE_REGISTRATION: {
-            registration_message_t* msg = (registration_message_t*)incomingData;
-            Log->printf("Registration request from device %d\n", msg->id);
-            instance->deviceManager.addDevice(mac, msg->id);
-            break;
-        }
-        case MESSAGE_TYPE_DATA: {
-            data_message_t* msg = (data_message_t*)incomingData;
-            Log->printf("Data from device %d: %f\n", msg->id, msg->value);
-            
-            // Publish data to MQTT
-            char topic[50];
-            sprintf(topic, "esphub/device/%d/value", msg->id);
-            char payload[20];
-            dtostrf(msg->value, 1, 2, payload);
-            instance->mqttManager.publish(topic, payload);
-            
-            break;
-        }
-    }
+    // Here we would parse the message and act on it
+    // For example, if it's a data message, we'd publish it to MQTT
+    // if (mesh.isRoot()) {
+    //     instance->mqttManager.publish("esphub/data", msg.c_str());
+    // }
 }
 
-void EspHub::OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
-    Log->print("Last Packet Send Status: ");
-    Log->println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+void EspHub::newConnectionCallback(uint32_t nodeId) {
+    Log->printf("New Connection, nodeId = %u\n", nodeId);
+}
+
+void EspHub::changedConnectionCallback() {
+    Log->printf("Changed connections\n");
+}
+
+void EspHub::nodeTimeAdjustedCallback(int32_t offset) {
+    Log->printf("Adjusted time %u. Offset = %d\n", instance->mesh.getNodeTime(), offset);
 }
