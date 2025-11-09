@@ -74,6 +74,7 @@ void EspHub::stopPlc() {
 void EspHub::loop() {
     mesh.update();
     appManager.updateAll();
+    meshDeviceManager.checkOfflineDevices(60000); // Check for offline devices every minute (60 seconds)
     if (mesh.isRoot()) {
         mqttManager.loop();
     }
