@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>EspHub Live Log</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>EspHub Live Log</h1>
+    <pre id="log"></pre>
+    <script>
+        var ws = new WebSocket("ws://" + window.location.hostname + "/ws");
+        ws.onmessage = function(evt) {
+            var log = document.getElementById('log');
+            log.innerHTML += evt.data; // Append data as it comes
+        };
+    </script>
+</body>
+</html>

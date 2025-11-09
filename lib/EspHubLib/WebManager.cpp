@@ -4,40 +4,27 @@ WebManager::WebManager() : server(80), ws("/ws") {
 }
 
 void WebManager::begin() {
+    if(!LITTLEFS.begin()){
+        Log->println("An Error has occurred while mounting LITTLEFS");
+        return;
+    }
+
     ws.onEvent(onWsEvent);
     server.addHandler(&ws);
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-        request->send(200, "text/plain", "Hello, world. Go to /log for live logs.");
+        request->send(LITTLEFS, "/index.html", "text/html");
     });
 
-    // Simple HTML page for the logger
     server.on("/log", HTTP_GET, [](AsyncWebServerRequest *request){
-        const char* html = R"rawliteral(
-<!DOCTYPE html>
-<html>
-<head>
-    <title>EspHub Live Log</title>
-    <meta charset="UTF-8">
-</head>
-<body>
-    <h1>EspHub Live Log</h1>
-    <pre id="log"></pre>
-    <script>
-        var ws = new WebSocket("ws://" + window.location.hostname + "/ws");
-        ws.onmessage = function(evt) {
-            var log = document.getElementById('log');
-            log.innerHTML += evt.data + '\n';
-        };
-    </script>
-</body>
-</html>
-)rawliteral";
-        request->send(200, "text/html", html);
+        request->send(LITTLEFS, "/log.html", "text/html");
     });
 
+    server.serveStatic("/", LITTLEFS, "/");
+
+    AsyncElegantOTA.begin(&server);    // Start ElegantOTA
     server.begin();
-    Log->println("Web server started.");
+    Log->println("Web server started. OTA available at /update");
 }
 
 void WebManager::log(const String& message) {

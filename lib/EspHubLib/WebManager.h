@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncWebSocket.h>
+#include <AsyncElegantOTA.h>
+#include "LITTLEFS.h"
 
 class WebManager {
 public:

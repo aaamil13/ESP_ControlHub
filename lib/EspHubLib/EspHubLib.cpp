@@ -14,13 +14,15 @@ EspHub::EspHub() : logger(webManager) {
 }
 
 void EspHub::begin() {
-    deviceManager.begin();
     webManager.begin();
     plcEngine.begin();
+    appManager.begin(plcEngine);
+}
 
+void EspHub::setupMesh(const char* password) {
     // painlessMesh initialization
     mesh.setDebugMsgTypes(ERROR | STARTUP); // set before init() so that you can see startup messages
-    mesh.init("EspHubMesh", "password1234", &meshScheduler, 5566);
+    mesh.init("EspHubMesh", password, &meshScheduler, 5566);
     mesh.onReceive(&receivedCallback);
     mesh.onNewConnection(&newConnectionCallback);
     mesh.onChangedConnections(&changedConnectionCallback);
@@ -29,8 +31,22 @@ void EspHub::begin() {
     Log->println("EspHub Library Initialized with painlessMesh");
 }
 
+void EspHub::setupMqtt(const char* server, int port, MQTT_CALLBACK_SIGNATURE) {
+    mqttManager.begin(server, port);
+    mqttManager.setCallback(callback);
+}
+
+void EspHub::setupTime(const char* tz_info) {
+    timeManager.begin(tz_info);
+}
+
 void EspHub::loadPlcConfiguration(const char* jsonConfig) {
-    plcEngine.loadConfiguration(jsonConfig);
+    if (plcEngine.loadConfiguration(jsonConfig)) {
+        // If PLC config is valid, load the high-level applications
+        JsonDocument doc;
+        deserializeJson(doc, jsonConfig);
+        appManager.loadApplications(doc.as<JsonObject>());
+    }
 }
 
 void EspHub::runPlc() {
@@ -43,7 +59,10 @@ void EspHub::stopPlc() {
 
 void EspHub::loop() {
     mesh.update();
-    mqttManager.loop();
+    appManager.updateAll();
+    if (mesh.isRoot()) {
+        mqttManager.loop();
+    }
 }
 
 void EspHub::receivedCallback(uint32_t from, String &msg) {

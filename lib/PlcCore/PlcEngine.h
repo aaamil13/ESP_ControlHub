@@ -4,6 +4,10 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include "PlcMemory.h"
+#include "blocks/PlcBlock.h"
+#include <esp_task_wdt.h>
+#include <vector>
+#include <memory>
 
 enum class PlcState {
     STOPPED,
@@ -21,10 +25,12 @@ public:
 
 private:
     PlcMemory memory;
-    JsonDocument config;
+    std::vector<std::unique_ptr<PlcBlock>> logic_blocks;
     PlcState currentState;
     TaskHandle_t plcTaskHandle;
+    uint32_t watchdog_timeout_ms;
 
+    void executeInitBlock();
     void evaluate();
     static void plcTask(void* parameter);
 };

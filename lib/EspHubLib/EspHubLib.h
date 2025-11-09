@@ -3,11 +3,12 @@
 
 #include <Arduino.h>
 #include <painlessMesh.h>
-#include "DeviceManager.h"
 #include "MqttManager.h"
-#include "PlcEngine.h"
+#include "../PlcCore/PlcEngine.h"
 #include "WebManager.h"
 #include "StreamLogger.h"
+#include "TimeManager.h"
+#include "AppManager.h"
 
 extern StreamLogger* Log;
 
@@ -16,17 +17,20 @@ public:
     EspHub();
     void begin();
     void loop();
+    void setupMesh(const char* password);
     void setupMqtt(const char* server, int port, MQTT_CALLBACK_SIGNATURE);
+    void setupTime(const char* tz_info);
     void loadPlcConfiguration(const char* jsonConfig);
     void runPlc();
     void stopPlc();
 
 private:
     painlessMesh mesh;
-    DeviceManager deviceManager;
     MqttManager mqttManager;
     PlcEngine plcEngine;
     WebManager webManager;
+    TimeManager timeManager;
+    AppManager appManager;
     StreamLogger logger;
     static EspHub* instance;
 
