@@ -146,15 +146,21 @@ void EspHub::receivedCallback(uint32_t from, String &msg) {
             case MESH_MSG_TYPE_SENSOR_DATA: {
                 // Update PLC memory with sensor data
                 const char* var_name = doc["var_name"].as<const char*>();
-                if (doc["value"].is<bool>()) {
-                    instance->plcEngine.getProgram("main_program")->getMemory().setValue<bool>(var_name, doc["value"].as<bool>());
-                } else if (doc["value"].is<float>()) {
-                    instance->plcEngine.getProgram("main_program")->getMemory().setValue<float>(var_name, doc["value"].as<float>());
-                } else if (doc["value"].is<int>()) {
-                    instance->plcEngine.getProgram("main_program")->getMemory().setValue<int16_t>(var_name, doc["value"].as<int>());
+                // Assuming "main_program" is the default program for now
+                PlcProgram* mainProgram = instance->plcEngine.getProgram("main_program");
+                if (mainProgram) {
+                    if (doc["value"].is<bool>()) {
+                        mainProgram->getMemory().setValue<bool>(var_name, doc["value"].as<bool>());
+                    } else if (doc["value"].is<float>()) {
+                        mainProgram->getMemory().setValue<float>(var_name, doc["value"].as<float>());
+                    } else if (doc["value"].is<int>()) {
+                        mainProgram->getMemory().setValue<int16_t>(var_name, doc["value"].as<int>());
+                    }
+                    instance->meshDeviceManager.updateDeviceLastSeen(from);
+                    Log->printf("Mesh Sensor Data from %u: %s = %s\n", from, var_name, msg.c_str());
+                } else {
+                    Log->printf("ERROR: Main PLC program not loaded, cannot update sensor data for %s.\n", var_name);
                 }
-                instance->meshDeviceManager.updateDeviceLastSeen(from);
-                Log->printf("Mesh Sensor Data from %u: %s = %s\n", from, var_name, msg.c_str());
                 break;
             }
             case MESH_MSG_TYPE_ACTUATOR_COMMAND: {

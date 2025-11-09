@@ -29,6 +29,7 @@ public:
     PlcEngineState getEngineState() const { return currentEngineState; } // Renamed
     PlcProgram* getProgram(const String& programName);
     std::vector<String> getProgramNames() const;
+    PlcMemory& getMemory() { return programs.at("main_program")->getMemory(); } // Expose PlcMemory for external access
 
     // Called by the FreeRTOS task
     void evaluateAllPrograms();
