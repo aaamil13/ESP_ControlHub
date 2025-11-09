@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>EspHub Mesh Register</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>EspHub Mesh Device Registration</h1>
+    <form id="registerForm">
+        <label for="nodeId">Node ID:</label><br>
+        <input type="number" id="nodeId" name="node_id" required><br>
+        <label for="deviceName">Device Name:</label><br>
+        <input type="text" id="deviceName" name="device_name" required><br><br>
+        <input type="submit" value="Register Device">
+    </form>
+    <div id="status"></div>
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+            var jsonData = {};
+            formData.forEach((value, key) => { jsonData[key] = value; });
+
+            fetch(this.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(jsonData)
+            }).then(response => response.text())
+              .then(data => {
+                  document.getElementById('status').innerText = data;
+              })
+              .catch(error => {
+                  console.error('Error:', error);
+                  document.getElementById('status').innerText = 'Error registering device.';
+              });
+        });
+    </script>
+</body>
+</html>

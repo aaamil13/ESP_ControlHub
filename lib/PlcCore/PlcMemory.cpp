@@ -54,11 +54,75 @@ T PlcMemory::getValue(const std::string& name, T defaultValue) {
 }
 
 void PlcMemory::loadRetentiveMemory() {
-    // TODO: Load retentive variables from NVS
+    Preferences preferences;
+    preferences.begin("plc_memory", true); // Use a separate namespace for PLC memory
+
+    for (auto& pair : memoryMap) {
+        PlcVariable& var = pair.second;
+        if (var.isRetentive) {
+            String key = String(pair.first.c_str());
+            switch (var.type) {
+                case PlcDataType::BOOL:
+                    var.value = preferences.getBool(key.c_str(), std::get<bool>(var.value));
+                    break;
+                case PlcDataType::BYTE:
+                    var.value = static_cast<uint8_t>(preferences.getUChar(key.c_str(), std::get<uint8_t>(var.value)));
+                    break;
+                case PlcDataType::INT:
+                    var.value = static_cast<int16_t>(preferences.getShort(key.c_str(), std::get<int16_t>(var.value)));
+                    break;
+                case PlcDataType::DINT:
+                    var.value = preferences.getUInt(key.c_str(), std::get<uint32_t>(var.value));
+                    break;
+                case PlcDataType::REAL:
+                    var.value = preferences.getFloat(key.c_str(), std::get<float>(var.value));
+                    break;
+                case PlcDataType::STRING:
+                    // String serialization is more complex, requires dynamic allocation or fixed size buffer
+                    // For now, just log a warning
+                    Log->printf("WARNING: String variable '%s' is retentive but not fully supported for NVS persistence yet.\n", key.c_str());
+                    break;
+            }
+        }
+    }
+    preferences.end();
+    Log->println("Retentive memory loaded from NVS.");
 }
 
 void PlcMemory::saveRetentiveMemory() {
-    // TODO: Save retentive variables to NVS
+    Preferences preferences;
+    preferences.begin("plc_memory", false);
+
+    for (auto& pair : memoryMap) {
+        PlcVariable& var = pair.second;
+        if (var.isRetentive) {
+            String key = String(pair.first.c_str());
+            switch (var.type) {
+                case PlcDataType::BOOL:
+                    preferences.putBool(key.c_str(), std::get<bool>(var.value));
+                    break;
+                case PlcDataType::BYTE:
+                    preferences.putUChar(key.c_str(), std::get<uint8_t>(var.value));
+                    break;
+                case PlcDataType::INT:
+                    preferences.putShort(key.c_str(), std::get<int16_t>(var.value));
+                    break;
+                case PlcDataType::DINT:
+                    preferences.putUInt(key.c_str(), std::get<uint32_t>(var.value));
+                    break;
+                case PlcDataType::REAL:
+                    preferences.putFloat(key.c_str(), std::get<float>(var.value));
+                    break;
+                case PlcDataType::STRING:
+                    // String serialization is more complex, requires dynamic allocation or fixed size buffer
+                    // For now, just log a warning
+                    Log->printf("WARNING: String variable '%s' is retentive but not fully supported for NVS persistence yet.\n", key.c_str());
+                    break;
+            }
+        }
+    }
+    preferences.end();
+    Log->println("Retentive memory saved to NVS.");
 }
 
 void PlcMemory::clear() {

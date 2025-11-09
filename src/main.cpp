@@ -23,12 +23,27 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   Log->println(message);
 
   if (strcmp(topic, "esphub/config/plc") == 0) {
+    // For now, assume a default program name "main_program"
     hub.loadPlcConfiguration(message);
   } else if (strcmp(topic, "esphub/plc/control") == 0) {
-    if (strcmp(message, "run") == 0) {
-      hub.runPlc();
-    } else if (strcmp(message, "stop") == 0) {
-      hub.stopPlc();
+    // Example: {"program": "main_program", "command": "run"}
+    StaticJsonDocument<200> doc;
+    DeserializationError error = deserializeJson(doc, message);
+    if (error) {
+        Log->printf("deserializeJson() failed for PLC control message: %s\n", error.c_str());
+        return;
+    }
+    String programName = doc["program"].as<String>();
+    String command = doc["command"].as<String>();
+
+    if (command == "run") {
+      hub.runPlc(programName);
+    } else if (command == "stop") {
+      hub.stopPlc(programName);
+    } else if (command == "pause") {
+      hub.pausePlc(programName);
+    } else if (command == "delete") {
+      hub.deletePlc(programName);
     }
   }
 }

@@ -10,8 +10,9 @@
 #include <memory>
 #include "../../EspHubLib/TimeManager.h" // For scheduler blocks
 #include "../../EspHubLib/MeshDeviceManager.h" // For sending commands to mesh devices
+#include "PlcProgram.h" // New PlcProgram class
 
-enum class PlcState {
+enum class PlcEngineState { // Renamed to avoid conflict
     STOPPED,
     RUNNING
 };
@@ -20,25 +21,26 @@ class PlcEngine {
 public:
     PlcEngine(TimeManager* timeManager, MeshDeviceManager* meshDeviceManager);
     void begin();
-    bool loadConfiguration(const char* jsonConfig);
-    void run();
-    void stop();
-    PlcState getState();
-    PlcMemory& getMemory() { return memory; } // Expose PlcMemory for external access
+    bool loadProgram(const String& programName, const char* jsonConfig);
+    void runProgram(const String& programName);
+    void pauseProgram(const String& programName);
+    void stopProgram(const String& programName);
+    void deleteProgram(const String& programName);
+    PlcEngineState getEngineState() const { return currentEngineState; } // Renamed
+    PlcProgram* getProgram(const String& programName);
+    std::vector<String> getProgramNames() const;
+
+    // Called by the FreeRTOS task
+    void evaluateAllPrograms();
 
 private:
-    PlcMemory memory;
-    std::vector<std::unique_ptr<PlcBlock>> logic_blocks;
-    StaticJsonDocument<4096> config; // Max 4KB for PLC config
-    PlcState currentState;
-    TaskHandle_t plcTaskHandle;
-    uint32_t watchdog_timeout_ms;
+    std::map<String, std::unique_ptr<PlcProgram>> programs;
+    PlcEngineState currentEngineState; // Renamed
+    TaskHandle_t plcEngineTaskHandle; // Renamed
     TimeManager* _timeManager;
     MeshDeviceManager* _meshDeviceManager;
 
-    void executeInitBlock();
-    void evaluate();
-    static void plcTask(void* parameter);
+    static void plcEngineTask(void* parameter); // Renamed
 };
 
 #endif // PLC_ENGINE_H

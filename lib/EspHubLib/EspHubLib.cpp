@@ -8,7 +8,7 @@ EspHub* EspHub::instance = nullptr;
 // Need a forward declaration for the scheduler
 Scheduler meshScheduler;
 
-EspHub::EspHub() : plcEngine(&timeManager, &meshDeviceManager), logger(webManager) {
+EspHub::EspHub() : plcEngine(&timeManager, &meshDeviceManager), webManager(&plcEngine, &meshDeviceManager), logger(webManager) {
     instance = this;
     Log = &logger;
 }
@@ -51,7 +51,10 @@ void EspHub::setupTime(const char* tz_info) {
 }
 
 void EspHub::loadPlcConfiguration(const char* jsonConfig) {
-    if (plcEngine.loadConfiguration(jsonConfig)) {
+    // This method now needs a program name. For simplicity, let's assume a default program name for now.
+    // In a real scenario, the program name would come from the web UI or MQTT command.
+    String defaultProgramName = "main_program";
+    if (plcEngine.loadProgram(defaultProgramName, jsonConfig)) {
         // If PLC config is valid, load the high-level applications
         StaticJsonDocument<4096> doc; // Use StaticJsonDocument for consistency
         DeserializationError error = deserializeJson(doc, jsonConfig);
@@ -64,17 +67,20 @@ void EspHub::loadPlcConfiguration(const char* jsonConfig) {
 }
 
 void EspHub::runPlc() {
-    plcEngine.run();
+    // This method now needs a program name.
+    plcEngine.runProgram("main_program");
 }
 
 void EspHub::stopPlc() {
-    plcEngine.stop();
+    // This method now needs a program name.
+    plcEngine.stopProgram("main_program");
 }
 
 void EspHub::loop() {
     mesh.update();
     appManager.updateAll();
     meshDeviceManager.checkOfflineDevices(60000); // Check for offline devices every minute (60 seconds)
+    plcEngine.evaluateAllPrograms(); // Evaluate all running PLC programs
     if (mesh.isRoot()) {
         mqttManager.loop();
     }

@@ -26,7 +26,7 @@ public:
     PlcMemory();
     void begin(); // Load retentive memory from NVS
 
-    bool declareVariable(const std::string& name, PlcDataType type, bool isRetentive = false);
+    bool declareVariable(const std::string& name, PlcDataType type, bool isRetentive = false, const String& mesh_link = "");
 
     template<typename T>
     bool setValue(const std::string& name, T val);
@@ -35,7 +35,7 @@ public:
     T getValue(const std::string& name, T defaultValue = T{});
 
     void saveRetentiveMemory();
-    void clear();
+    void clear(); // New method
 
 private:
     std::map<std::string, PlcVariable> memoryMap;

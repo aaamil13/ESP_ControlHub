@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>EspHub PLC Monitor</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container { max-width: 800px; margin: auto; padding: 20px; }
+        h1 { text-align: center; }
+        pre { background-color: #f4f4f4; padding: 10px; border: 1px solid #ddd; white-space: pre-wrap; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        .status-online { color: green; font-weight: bold; }
+        .status-offline { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>EspHub PLC Monitor</h1>
+
+        <h2>PLC Status</h2>
+        <p>State: <span id="plcState">UNKNOWN</span></p>
+        <button onclick="sendPlcCommand('run')">Run PLC</button>
+        <button onclick="sendPlcCommand('stop')">Stop PLC</button>
+
+        <h2>PLC Variables</h2>
+        <pre id="plcVariables">Loading...</pre>
+
+        <h2>Mesh Devices</h2>
+        <pre id="meshDevices">Loading...</pre>
+    </div>
+
+    <script>
+        var ws = new WebSocket("ws://" + window.location.hostname + "/ws");
+        ws.onmessage = function(evt) {
+            var data = JSON.parse(evt.data);
+            if (data.type === "plc_status") {
+                document.getElementById('plcState').innerText = data.state;
+            } else if (data.type === "plc_variables") {
+                document.getElementById('plcVariables').innerText = JSON.stringify(data.variables, null, 2);
+            } else if (data.type === "mesh_devices") {
+                let devicesHtml = '';
+                data.devices.forEach(device => {
+                    devicesHtml += `NodeID: ${device.nodeId}, Name: ${device.name}, Status: <span class="${device.isOnline ? 'status-online' : 'status-offline'}">${device.isOnline ? 'Online' : 'Offline'}</span>, Last Seen: ${new Date(device.lastSeen).toLocaleString()}\n`;
+                });
+                document.getElementById('meshDevices').innerText = devicesHtml;
+            }
+        };
+
+        function sendPlcCommand(command) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/plc_command", true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.send(JSON.stringify({ command: command }));
+        }
+
+        // Request initial data
+        ws.onopen = function() {
+            ws.send(JSON.stringify({ request: "plc_status" }));
+            ws.send(JSON.stringify({ request: "plc_variables" }));
+            ws.send(JSON.stringify({ request: "mesh_devices" }));
+        };
+    </script>
+</body>
+</html>
