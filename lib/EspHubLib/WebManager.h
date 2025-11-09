@@ -14,6 +14,7 @@ public:
     WebManager(PlcEngine* plcEngine, MeshDeviceManager* meshDeviceManager);
     void begin();
     void log(const String& message);
+    AsyncWebServer& getServer() { return server; } // Expose server instance
 
 private:
     AsyncWebServer server;

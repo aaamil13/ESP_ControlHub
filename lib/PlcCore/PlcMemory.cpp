@@ -77,11 +77,13 @@ void PlcMemory::loadRetentiveMemory() {
                 case PlcDataType::REAL:
                     var.value = preferences.getFloat(key.c_str(), std::get<float>(var.value));
                     break;
-                case PlcDataType::STRING:
-                    // String serialization is more complex, requires dynamic allocation or fixed size buffer
-                    // For now, just log a warning
-                    Log->printf("WARNING: String variable '%s' is retentive but not fully supported for NVS persistence yet.\n", key.c_str());
+                case PlcDataType::STRING: {
+                    String stored_string = preferences.getString(key.c_str(), "");
+                    if (!stored_string.isEmpty()) {
+                        var.value = stored_string;
+                    }
                     break;
+                }
             }
         }
     }
@@ -114,9 +116,7 @@ void PlcMemory::saveRetentiveMemory() {
                     preferences.putFloat(key.c_str(), std::get<float>(var.value));
                     break;
                 case PlcDataType::STRING:
-                    // String serialization is more complex, requires dynamic allocation or fixed size buffer
-                    // For now, just log a warning
-                    Log->printf("WARNING: String variable '%s' is retentive but not fully supported for NVS persistence yet.\n", key.c_str());
+                    preferences.putString(key.c_str(), std::get<String>(var.value));
                     break;
             }
         }

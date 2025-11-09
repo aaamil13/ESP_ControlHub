@@ -16,7 +16,7 @@ EspHub::EspHub() : plcEngine(&timeManager, &meshDeviceManager), webManager(&plcE
 void EspHub::begin() {
     webManager.begin();
     plcEngine.begin();
-    appManager.begin(plcEngine);
+    appManager.begin(plcEngine, webManager.getServer()); // Pass webManager's server
     meshDeviceManager.begin(); // Initialize MeshDeviceManager
     userManager.begin(); // Initialize UserManager
 

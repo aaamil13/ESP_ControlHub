@@ -1,16 +1,15 @@
 #include "AppManager.h"
-// We will include specific app modules here later
-// #include "apps/ThermostatApp.h"
 
-AppManager::AppManager() : _plcEngine(nullptr) {
+AppManager::AppManager() : _plcEngine(nullptr), _server(nullptr) {
 }
 
-void AppManager::begin(PlcEngine& plcEngine) {
+void AppManager::begin(PlcEngine& plcEngine, AsyncWebServer& server) {
     _plcEngine = &plcEngine;
+    _server = &server;
 }
 
 void AppManager::loadApplications(const JsonObject& config) {
-    if (!_plcEngine) return;
+    if (!_plcEngine || !_server) return;
 
     app_instances.clear();
 
@@ -19,13 +18,17 @@ void AppManager::loadApplications(const JsonObject& config) {
         for (JsonObject app_config : apps) {
             const char* type = app_config["type"];
             
-            // This is where we will create instances of our app modules
-            // For example:
-            // if (strcmp(type, "thermostat") == 0) {
-            //     auto app = std::make_unique<ThermostatApp>();
-            //     app->configure(app_config, *_plcEngine);
-            //     app_instances.push_back(std::move(app));
-            // }
+            if (strcmp(type, "thermostat") == 0) {
+                auto app = std::make_unique<ThermostatApp>();
+                if (app->configure(app_config, *_plcEngine)) {
+                    app->setupWebServer(*_server); // Setup web server routes for this app
+                    app_instances.push_back(std::move(app));
+                    Log->printf("Loaded ThermostatApp.\n");
+                } else {
+                    Log->printf("ERROR: Failed to configure ThermostatApp.\n");
+                }
+            }
+            // Add other app types here with else if
 
             Log->printf("Loading application of type: %s\n", type);
         }

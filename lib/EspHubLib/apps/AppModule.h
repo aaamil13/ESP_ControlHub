@@ -3,6 +3,7 @@
 
 #include <ArduinoJson.h>
 #include "../../PlcCore/PlcEngine.h"
+#include "../WebManager.h" // For web server integration
 
 // Base class for all high-level application modules
 class AppModule {
@@ -11,7 +12,10 @@ public:
 
     // Called once to pass the JSON configuration for this specific app instance.
     // The app module can use the plcEngine to create its underlying logic.
-    virtual void configure(const JsonObject& config, PlcEngine& plcEngine) = 0;
+    virtual bool configure(const JsonObject& config, PlcEngine& plcEngine) = 0;
+
+    // Called to setup web server routes specific to this app module
+    virtual void setupWebServer(AsyncWebServer& server) = 0;
 
     // Called repeatedly to execute the app's logic.
     virtual void update() = 0;
