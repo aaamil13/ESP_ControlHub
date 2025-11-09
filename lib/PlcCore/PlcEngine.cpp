@@ -37,6 +37,10 @@
 #include "blocks/conversion/BlockInt16ToFloat.h"
 #include "blocks/conversion/BlockInt32ToDouble.h"
 #include "blocks/logic/BlockSequencer.h"
+#include "blocks/string/BlockStringConcat.h"
+#include "blocks/string/BlockStringFind.h"
+#include "blocks/string/BlockStringCopy.h"
+#include "blocks/string/BlockStringFormat.h"
 
 PlcEngine::PlcEngine(TimeManager* timeManager, MeshDeviceManager* meshDeviceManager)
     : currentEngineState(PlcEngineState::STOPPED), plcEngineTaskHandle(NULL), _timeManager(timeManager), _meshDeviceManager(meshDeviceManager) {
