@@ -75,6 +75,7 @@ bool PlcEngine::loadConfiguration(const char* jsonConfig) {
             
             String type_str = var_attrs["type"];
             bool is_retentive = var_attrs["retentive"] | false;
+            String mesh_link = var_attrs["mesh_link"] | "";
             
             PlcDataType type;
             if (type_str == "bool") type = PlcDataType::BOOL;
@@ -88,11 +89,11 @@ bool PlcEngine::loadConfiguration(const char* jsonConfig) {
                 return false;
             }
 
-            if (!memory.declareVariable(var_name, type, is_retentive)) {
+            if (!memory.declareVariable(var_name, type, is_retentive, mesh_link)) {
                 Log->printf("ERROR: Failed to declare variable '%s'\n", var_name);
                 return false;
             }
-            Log->printf("Declared variable '%s' of type %s\n", var_name, type_str.c_str());
+            Log->printf("Declared variable '%s' of type %s (mesh_link: %s)\n", var_name, type_str.c_str(), mesh_link.c_str());
         }
     }
 

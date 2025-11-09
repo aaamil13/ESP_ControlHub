@@ -18,6 +18,7 @@ struct PlcVariable {
     PlcValue value;
     PlcDataType type;
     bool isRetentive;
+    String mesh_link; // Identifier for mesh-linked variables
 };
 
 class PlcMemory {

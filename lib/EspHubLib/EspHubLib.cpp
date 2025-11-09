@@ -1,5 +1,5 @@
 #include "EspHubLib.h"
-#include "esp_hub_protocol.h"
+#include "mesh_protocol.h" // New mesh protocol header
 #include <WiFi.h>
 
 StreamLogger* Log = nullptr;
@@ -52,9 +52,13 @@ void EspHub::setupTime(const char* tz_info) {
 void EspHub::loadPlcConfiguration(const char* jsonConfig) {
     if (plcEngine.loadConfiguration(jsonConfig)) {
         // If PLC config is valid, load the high-level applications
-        JsonDocument doc;
-        deserializeJson(doc, jsonConfig);
-        appManager.loadApplications(doc.as<JsonObject>());
+        StaticJsonDocument<4096> doc; // Use StaticJsonDocument for consistency
+        DeserializationError error = deserializeJson(doc, jsonConfig);
+        if (!error) {
+            appManager.loadApplications(doc.as<JsonObject>());
+        } else {
+            Log->printf("ERROR: Failed to deserialize PLC config for appManager: %s\n", error.c_str());
+        }
     }
 }
 
@@ -77,11 +81,44 @@ void EspHub::loop() {
 void EspHub::receivedCallback(uint32_t from, String &msg) {
     Log->printf("Received from %u: %s\n", from, msg.c_str());
 
-    // Here we would parse the message and act on it
-    // For example, if it's a data message, we'd publish it to MQTT
-    // if (mesh.isRoot()) {
-    //     instance->mqttManager.publish("esphub/data", msg.c_str());
-    // }
+    StaticJsonDocument<512> doc; // Use StaticJsonDocument for mesh messages
+    if (parseMeshMessage(msg, doc)) {
+        MeshMessageType type = static_cast<MeshMessageType>(doc["type"].as<int>());
+        switch (type) {
+            case MESH_MSG_TYPE_REGISTRATION: {
+                // Handle registration
+                Log->printf("Mesh Registration from %u: ID %s\n", from, doc["id"].as<const char*>());
+                // Here, we would register the device with its NodeID and associated PLC variables
+                break;
+            }
+            case MESH_MSG_TYPE_SENSOR_DATA: {
+                // Update PLC memory with sensor data
+                const char* var_name = doc["var_name"].as<const char*>();
+                if (doc["value"].is<bool>()) {
+                    instance->plcEngine.getMemory().setValue<bool>(var_name, doc["value"].as<bool>());
+                } else if (doc["value"].is<float>()) {
+                    instance->plcEngine.getMemory().setValue<float>(var_name, doc["value"].as<float>());
+                } else if (doc["value"].is<int>()) {
+                    instance->plcEngine.getMemory().setValue<int16_t>(var_name, doc["value"].as<int>());
+                }
+                Log->printf("Mesh Sensor Data from %u: %s = %s\n", from, var_name, msg.c_str());
+                break;
+            }
+            case MESH_MSG_TYPE_ACTUATOR_COMMAND: {
+                // This message type would typically be sent *to* a device, not received by the hub
+                Log->printf("Received unexpected ACTUATOR_COMMAND from %u\n", from);
+                break;
+            }
+            case MESH_MSG_TYPE_HEARTBEAT: {
+                // Update last seen timestamp for the device
+                Log->printf("Mesh Heartbeat from %u\n", from);
+                break;
+            }
+            default:
+                Log->printf("Received unknown mesh message type from %u\n", from);
+                break;
+        }
+    }
 }
 
 void EspHub::newConnectionCallback(uint32_t nodeId) {

@@ -7,13 +7,14 @@ void PlcMemory::begin() {
     loadRetentiveMemory();
 }
 
-bool PlcMemory::declareVariable(const std::string& name, PlcDataType type, bool isRetentive) {
+bool PlcMemory::declareVariable(const std::string& name, PlcDataType type, bool isRetentive, const String& mesh_link) {
     if (memoryMap.count(name)) {
         return false; // Variable already exists
     }
     PlcVariable newVar;
     newVar.type = type;
     newVar.isRetentive = isRetentive;
+    newVar.mesh_link = mesh_link;
     // Initialize with default value
     switch (type) {
         case PlcDataType::BOOL: newVar.value = false; break;
