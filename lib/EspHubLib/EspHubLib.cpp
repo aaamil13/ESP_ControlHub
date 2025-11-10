@@ -65,6 +65,14 @@ void EspHub::begin() {
     deviceConfigManager.loadAllDevices();
     EspHubLog->printf("Loaded %d device configurations\n", deviceConfigManager.getLoadedDeviceCount());
 
+    // Initialize VariableRegistry
+    variableRegistry.begin();
+    variableRegistry.setPlcEngine(&plcEngine);
+    variableRegistry.setDeviceConfigManager(&deviceConfigManager);
+    variableRegistry.setMqttManager(&mqttManager);
+    variableRegistry.setLocalHubId("hub_" + String(ESP.getEfuseMac(), HEX));
+    EspHubLog->println("Variable Registry initialized");
+
     // painlessMesh initialization
     // mesh.setDebugMsgTypes(ERROR | STARTUP); // set before init() so that you can see startup messages
     // mesh.init("EspHubMesh", "password1234", &meshScheduler, 5566);

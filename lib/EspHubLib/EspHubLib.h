@@ -14,6 +14,7 @@
 #include "MqttDiscoveryManager.h" // New MqttDiscoveryManager
 #include "OtaManager.h" // New OtaManager
 #include "DeviceConfigManager.h" // Device configuration manager
+#include "VariableRegistry.h" // Variable registry for unified variable access
 
 // Conditional protocol manager includes
 #ifdef USE_WIFI_DEVICES
@@ -59,6 +60,7 @@ private:
     MqttDiscoveryManager mqttDiscoveryManager; // New MqttDiscoveryManager instance
     OtaManager otaManager; // New OtaManager instance
     DeviceConfigManager deviceConfigManager; // Device configuration manager
+    VariableRegistry variableRegistry; // Variable registry for unified access
 
     // Conditional protocol managers
     #ifdef USE_WIFI_DEVICES
