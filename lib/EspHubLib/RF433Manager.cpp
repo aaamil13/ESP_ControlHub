@@ -1,14 +1,9 @@
 #include "RF433Manager.h"
-#include "StreamLogger.h"
-#include "DeviceRegistry.h"
+#include "Logger.h"
 
-extern StreamLogger* EspHubLog;
-
-RF433Manager::RF433Manager(int rxPin, int txPin, const String& defaultLocation)
-    : DeviceManager("rf433", ProtocolType::RF433),
-      rxPin(rxPin),
+RF433Manager::RF433Manager(int rxPin, int txPin)
+    : rxPin(rxPin),
       txPin(txPin),
-      defaultLocation(defaultLocation),
       learningEnabled(false),
       learningEndTime(0),
       learnCallback(nullptr) {
@@ -18,21 +13,21 @@ RF433Manager::~RF433Manager() {
 }
 
 void RF433Manager::begin() {
-    EspHubLog->printf("RF433Manager: Initializing (RX: GPIO%d, TX: GPIO%d)...\\n", rxPin, txPin);
+    LOG_INFO("RF433Manager", "Initializing (RX: GPIO" + String(rxPin) + ", TX: GPIO" + String(txPin) + ")...");
 
     // Initialize receiver
     if (rxPin >= 0) {
         rcSwitch.enableReceive(digitalPinToInterrupt(rxPin));
-        EspHubLog->printf("RF433 receiver enabled on GPIO%d\\n", rxPin);
+        LOG_INFO("RF433Manager", "Receiver enabled on GPIO" + String(rxPin));
     }
 
     // Initialize transmitter
     if (txPin >= 0) {
         rcSwitch.enableTransmit(txPin);
-        EspHubLog->printf("RF433 transmitter enabled on GPIO%d\\n", txPin);
+        LOG_INFO("RF433Manager", "Transmitter enabled on GPIO" + String(txPin));
     }
 
-    EspHubLog->println("RF433Manager initialized");
+    LOG_INFO("RF433Manager", "Initialized");
 }
 
 void RF433Manager::loop() {
@@ -46,201 +41,213 @@ void RF433Manager::loop() {
     if (learningEnabled && millis() > learningEndTime) {
         disableLearningMode();
     }
-
-    // Check offline devices
-    checkOfflineDevices(300000); // 5 minute timeout for RF devices
 }
 
-void RF433Manager::setDefaultLocation(const String& location) {
-    defaultLocation = location;
-}
+// ============================================================================
+// ProtocolManagerInterface Implementation
+// ============================================================================
 
-bool RF433Manager::registerDevice(unsigned long onCode, unsigned long offCode,
-                                  const String& deviceId, const String& location,
-                                  int protocol, int pulseLength, int bitLength) {
-    // Build full device ID
-    String fullDeviceId = buildDeviceId(location, deviceId);
+bool RF433Manager::initializeDevice(const String& deviceId, const JsonObject& connectionConfig) {
+    LOG_INFO("RF433Manager", "Initializing device: " + deviceId);
 
-    // Check if device already exists
-    if (devices.find(fullDeviceId) != devices.end()) {
-        EspHubLog->printf("RF433 device %s already registered\\n", fullDeviceId.c_str());
-        return false;
-    }
-
-    // Create device structure
+    // For RF433, connection config contains RX/TX pins (global, not per-device)
+    // Device-specific RF codes are in endpoint configs
+    // Just create empty device entry
     RF433Device device;
-    device.code = onCode;
-    device.offCode = offCode;
-    device.protocol = protocol;
-    device.pulseLength = pulseLength;
-    device.bitLength = bitLength;
-    device.deviceId = fullDeviceId;
-    device.location = location;
+    device.deviceId = deviceId;
+    device.code = 0;
+    device.offCode = 0;
+    device.protocol = 1;
+    device.pulseLength = 0;
+    device.bitLength = 24;
     device.isToggle = false;
     device.currentState = false;
+    device.location = "";
 
-    // Register in DeviceRegistry
-    JsonDocument config;
-    config["code_on"] = onCode;
-    config["code_off"] = offCode;
-    config["protocol"] = protocol;
-    config["pulse_length"] = pulseLength;
-    config["bit_length"] = bitLength;
+    devices[deviceId] = device;
 
-    bool registered = registerDevice(fullDeviceId, config.as<JsonObject>());
-    if (!registered) {
-        EspHubLog->printf("ERROR: Failed to register RF433 device %s\\n", fullDeviceId.c_str());
-        return false;
-    }
-
-    // Store device
-    devices[fullDeviceId] = device;
-    codeToDevice[onCode] = fullDeviceId;
-    if (offCode != 0) {
-        codeToDevice[offCode] = fullDeviceId;
-    }
-
-    // Register endpoint
-    registerEndpointForDevice(device);
-
-    EspHubLog->printf("Registered RF433 device: %s (ON: %lu, OFF: %lu)\\n",
-                     fullDeviceId.c_str(), onCode, offCode);
-
+    LOG_INFO("RF433Manager", "Device initialized: " + deviceId);
     return true;
 }
 
-bool RF433Manager::registerToggleDevice(unsigned long code, const String& deviceId,
-                                       const String& location,
-                                       int protocol, int pulseLength, int bitLength) {
-    // Build full device ID
-    String fullDeviceId = buildDeviceId(location, deviceId);
-
-    // Check if device already exists
-    if (devices.find(fullDeviceId) != devices.end()) {
-        EspHubLog->printf("RF433 device %s already registered\\n", fullDeviceId.c_str());
-        return false;
-    }
-
-    // Create device structure
-    RF433Device device;
-    device.code = code;
-    device.offCode = 0;
-    device.protocol = protocol;
-    device.pulseLength = pulseLength;
-    device.bitLength = bitLength;
-    device.deviceId = fullDeviceId;
-    device.location = location;
-    device.isToggle = true;
-    device.currentState = false;
-
-    // Register in DeviceRegistry
-    JsonDocument config;
-    config["code"] = code;
-    config["protocol"] = protocol;
-    config["pulse_length"] = pulseLength;
-    config["bit_length"] = bitLength;
-    config["toggle"] = true;
-
-    bool registered = registerDevice(fullDeviceId, config.as<JsonObject>());
-    if (!registered) {
-        EspHubLog->printf("ERROR: Failed to register RF433 toggle device %s\\n", fullDeviceId.c_str());
-        return false;
-    }
-
-    // Store device
-    devices[fullDeviceId] = device;
-    codeToDevice[code] = fullDeviceId;
-
-    // Register endpoint
-    registerEndpointForDevice(device);
-
-    EspHubLog->printf("Registered RF433 toggle device: %s (Code: %lu)\\n",
-                     fullDeviceId.c_str(), code);
-
-    return true;
-}
-
-bool RF433Manager::sendCommand(const String& deviceId, bool state) {
-    // Find device
+bool RF433Manager::removeDevice(const String& deviceId) {
     auto it = devices.find(deviceId);
     if (it == devices.end()) {
-        EspHubLog->printf("ERROR: RF433 device %s not found\\n", deviceId.c_str());
         return false;
     }
 
+    // Remove from code mapping
     RF433Device& device = it->second;
+    if (device.code != 0) {
+        codeToDevice.erase(device.code);
+    }
+    if (device.offCode != 0) {
+        codeToDevice.erase(device.offCode);
+    }
 
-    // Determine code to send
+    devices.erase(it);
+    LOG_INFO("RF433Manager", "Removed device: " + deviceId);
+    return true;
+}
+
+bool RF433Manager::readEndpoint(const String& deviceId, const JsonObject& endpointConfig, PlcValue& value) {
+    // RF433 is primarily transmit-only for most devices
+    // Reading is based on received codes, which update state asynchronously
+
+    RF433Device* device = getDeviceById(deviceId);
+    if (!device) {
+        LOG_ERROR("RF433Manager", "Device not found: " + deviceId);
+        return false;
+    }
+
+    // Return current known state
+    value = PlcValue(PlcValueType::BOOL);
+    value.value.bVal = device->currentState;
+
+    return true;
+}
+
+bool RF433Manager::writeEndpoint(const String& deviceId, const JsonObject& endpointConfig, const PlcValue& value) {
+    RF433Device* device = getDeviceById(deviceId);
+    if (!device) {
+        LOG_ERROR("RF433Manager", "Device not found: " + deviceId);
+        return false;
+    }
+
+    // Parse RF config from endpoint
+    unsigned long onCode, offCode;
+    int protocol, pulseLength, bitLength;
+
+    if (!parseRF433Config(endpointConfig, onCode, offCode, protocol, pulseLength, bitLength)) {
+        LOG_ERROR("RF433Manager", "Invalid RF433 configuration");
+        return false;
+    }
+
+    // Update device config if codes changed
+    if (device->code != onCode || device->offCode != offCode) {
+        // Remove old code mappings
+        if (device->code != 0) codeToDevice.erase(device->code);
+        if (device->offCode != 0) codeToDevice.erase(device->offCode);
+
+        // Update device
+        device->code = onCode;
+        device->offCode = offCode;
+        device->protocol = protocol;
+        device->pulseLength = pulseLength;
+        device->bitLength = bitLength;
+        device->isToggle = (offCode == 0 || offCode == onCode);
+
+        // Add new code mappings
+        if (onCode != 0) codeToDevice[onCode] = deviceId;
+        if (offCode != 0 && offCode != onCode) codeToDevice[offCode] = deviceId;
+    }
+
+    // Determine which code to send
     unsigned long codeToSend;
-    if (device.isToggle) {
-        codeToSend = device.code;
-        // Toggle state
-        device.currentState = !device.currentState;
+    bool targetState;
+
+    if (value.type == PlcValueType::BOOL) {
+        targetState = value.value.bVal;
     } else {
-        codeToSend = state ? device.code : device.offCode;
-        device.currentState = state;
+        LOG_ERROR("RF433Manager", "RF433 write requires bool value");
+        return false;
+    }
+
+    if (device->isToggle) {
+        // For toggle devices, always send the same code
+        codeToSend = onCode;
+    } else {
+        // For separate ON/OFF codes
+        codeToSend = targetState ? onCode : offCode;
     }
 
     // Send RF code
-    bool success = sendRawCode(codeToSend, device.protocol, device.pulseLength, device.bitLength);
-
-    if (success) {
-        // Update endpoint value in registry
-        String endpointName = device.deviceId + ".state.bool";
-        Endpoint* endpoint = registry->getEndpoint(endpointName);
-        if (endpoint) {
-            PlcValue newValue(PlcValueType::BOOL);
-            newValue.value.bVal = device.currentState;
-            registry->updateEndpointValue(endpointName, newValue);
-        }
-
-        EspHubLog->printf("RF433 command sent to %s: %s (code: %lu)\\n",
-                         deviceId.c_str(), device.currentState ? "ON" : "OFF", codeToSend);
+    if (sendRawCode(codeToSend, protocol, pulseLength, bitLength)) {
+        device->currentState = targetState;
+        LOG_INFO("RF433Manager", "Sent RF code " + String(codeToSend) + " to " + deviceId);
+        return true;
     }
 
-    return success;
+    return false;
 }
 
-bool RF433Manager::sendRawCode(unsigned long code, int protocol, int pulseLength, int bitLength) {
-    if (txPin < 0) {
-        EspHubLog->println("ERROR: RF433 transmitter not configured");
+bool RF433Manager::testConnection(const JsonObject& connectionConfig) {
+    // For RF433, test if transmitter is initialized
+    // RX/TX pins should match the manager's pins
+    int testRxPin = connectionConfig["rx_pin"] | -1;
+    int testTxPin = connectionConfig["tx_pin"] | -1;
+
+    if (testRxPin != rxPin || testTxPin != txPin) {
+        LOG_ERROR("RF433Manager", "Connection config pins don't match manager pins");
         return false;
     }
 
-    // Set protocol
-    rcSwitch.setProtocol(protocol);
-
-    // Set pulse length if specified
-    if (pulseLength > 0) {
-        rcSwitch.setPulseLength(pulseLength);
+    // Check if transmitter is enabled
+    if (txPin >= 0) {
+        LOG_INFO("RF433Manager", "RF433 transmitter test OK");
+        return true;
     }
 
-    // Send code
-    rcSwitch.send(code, bitLength);
-
-    EspHubLog->printf("RF433 sent: code=%lu, protocol=%d, bits=%d\\n",
-                     code, protocol, bitLength);
-
-    return true;
+    return false;
 }
+
+bool RF433Manager::testEndpoint(const String& deviceId, const JsonObject& endpointConfig) {
+    RF433Device* device = getDeviceById(deviceId);
+    if (!device) {
+        LOG_ERROR("RF433Manager", "Device not found: " + deviceId);
+        return false;
+    }
+
+    // Parse RF config
+    unsigned long onCode, offCode;
+    int protocol, pulseLength, bitLength;
+
+    if (!parseRF433Config(endpointConfig, onCode, offCode, protocol, pulseLength, bitLength)) {
+        LOG_ERROR("RF433Manager", "Invalid RF433 configuration");
+        return false;
+    }
+
+    // Try to send test code (ON code)
+    if (sendRawCode(onCode, protocol, pulseLength, bitLength)) {
+        LOG_INFO("RF433Manager", "Test code sent successfully: " + String(onCode));
+        return true;
+    }
+
+    return false;
+}
+
+bool RF433Manager::isDeviceOnline(const String& deviceId) {
+    // RF433 devices are always considered "online" if registered
+    // since we can't verify if they actually receive the signal
+    return (devices.find(deviceId) != devices.end());
+}
+
+// ============================================================================
+// Learning Mode
+// ============================================================================
 
 void RF433Manager::enableLearningMode(uint32_t duration_ms) {
     learningEnabled = true;
     learningEndTime = millis() + duration_ms;
-    EspHubLog->printf("RF433 learning mode enabled for %u seconds\\n", duration_ms / 1000);
+    LOG_INFO("RF433Manager", "Learning mode enabled for " + String(duration_ms / 1000) + " seconds");
 }
 
 void RF433Manager::disableLearningMode() {
-    if (!learningEnabled) return;
-
-    learningEnabled = false;
-    EspHubLog->println("RF433 learning mode disabled");
+    if (learningEnabled) {
+        learningEnabled = false;
+        learningEndTime = 0;
+        LOG_INFO("RF433Manager", "Learning mode disabled");
+    }
 }
+
+// ============================================================================
+// Private Methods
+// ============================================================================
 
 RF433Device* RF433Manager::getDeviceByCode(unsigned long code) {
     auto it = codeToDevice.find(code);
     if (it != codeToDevice.end()) {
-        return &devices[it->second];
+        return getDeviceById(it->second);
     }
     return nullptr;
 }
@@ -253,19 +260,59 @@ RF433Device* RF433Manager::getDeviceById(const String& deviceId) {
     return nullptr;
 }
 
+bool RF433Manager::sendRawCode(unsigned long code, int protocol, int pulseLength, int bitLength) {
+    if (txPin < 0) {
+        LOG_ERROR("RF433Manager", "Transmitter not initialized");
+        return false;
+    }
+
+    if (code == 0) {
+        LOG_ERROR("RF433Manager", "Invalid code: 0");
+        return false;
+    }
+
+    // Set protocol
+    rcSwitch.setProtocol(protocol);
+
+    // Set pulse length if specified
+    if (pulseLength > 0) {
+        rcSwitch.setPulseLength(pulseLength);
+    }
+
+    // Send code
+    if (bitLength > 0) {
+        rcSwitch.send(code, bitLength);
+    } else {
+        rcSwitch.send(code, 24); // Default 24 bits
+    }
+
+    LOG_INFO("RF433Manager", "Sent RF code: " + String(code) +
+             " (protocol: " + String(protocol) +
+             ", pulse: " + String(pulseLength) +
+             ", bits: " + String(bitLength) + ")");
+
+    return true;
+}
+
 void RF433Manager::handleReceivedCode() {
+    if (!rcSwitch.available()) {
+        return;
+    }
+
     unsigned long receivedCode = rcSwitch.getReceivedValue();
     int protocol = rcSwitch.getReceivedProtocol();
     int bitLength = rcSwitch.getReceivedBitlength();
     int pulseLength = rcSwitch.getReceivedDelay();
 
     if (receivedCode == 0) {
-        EspHubLog->println("RF433 received unknown encoding");
+        LOG_WARN("RF433Manager", "Received unknown encoding");
         return;
     }
 
-    EspHubLog->printf("RF433 received: code=%lu, protocol=%d, bits=%d, pulse=%d\\n",
-                     receivedCode, protocol, bitLength, pulseLength);
+    LOG_INFO("RF433Manager", "Received RF code: " + String(receivedCode) +
+             " (protocol: " + String(protocol) +
+             ", bits: " + String(bitLength) +
+             ", pulse: " + String(pulseLength) + ")");
 
     // Check if code belongs to registered device
     RF433Device* device = getDeviceByCode(receivedCode);
@@ -275,50 +322,45 @@ void RF433Manager::handleReceivedCode() {
         if (device->isToggle) {
             device->currentState = !device->currentState;
         } else {
-            device->currentState = (receivedCode == device->code);
+            if (receivedCode == device->code) {
+                device->currentState = true;
+            } else if (receivedCode == device->offCode) {
+                device->currentState = false;
+            }
         }
 
-        // Update endpoint in registry
-        String endpointName = device->deviceId + ".state.bool";
-        Endpoint* endpoint = registry->getEndpoint(endpointName);
-        if (endpoint) {
-            PlcValue newValue(PlcValueType::BOOL);
-            newValue.value.bVal = device->currentState;
-            registry->updateEndpointValue(endpointName, newValue);
-            updateDeviceStatus(device->deviceId, true);
-        }
-
-        EspHubLog->printf("RF433 device %s state: %s\\n",
-                         device->deviceId.c_str(), device->currentState ? "ON" : "OFF");
-    } else if (learningEnabled) {
+        LOG_INFO("RF433Manager", "Device " + device->deviceId + " state: " +
+                String(device->currentState ? "ON" : "OFF"));
+    } else if (learningEnabled && learnCallback) {
         // Learning mode - notify callback
-        EspHubLog->printf("RF433 learning: New code detected: %lu\\n", receivedCode);
-
-        if (learnCallback) {
-            learnCallback(receivedCode, protocol, bitLength, pulseLength);
-        }
-    } else {
-        EspHubLog->printf("RF433: Unknown code %lu (not registered)\\n", receivedCode);
+        LOG_INFO("RF433Manager", "Learning mode: new code detected");
+        learnCallback(receivedCode, protocol, bitLength, pulseLength);
     }
 }
 
-void RF433Manager::registerEndpointForDevice(const RF433Device& device) {
-    // Create endpoint for device state
-    Endpoint endpoint;
-    endpoint.fullName = device.deviceId + ".state.bool";
-    endpoint.location = device.location;
-    endpoint.protocol = ProtocolType::RF433;
-    endpoint.deviceId = device.deviceId;
-    endpoint.endpoint = "state";
-    endpoint.datatype = PlcValueType::BOOL;
-    endpoint.isOnline = true;
-    endpoint.lastSeen = millis();
-    endpoint.isWritable = true;
-    endpoint.currentValue.type = PlcValueType::BOOL;
-    endpoint.currentValue.value.bVal = device.currentState;
-
-    bool registered = registerEndpointHelper(endpoint);
-    if (registered) {
-        EspHubLog->printf("  Registered endpoint: %s (RW ONLINE)\\n", endpoint.fullName.c_str());
+bool RF433Manager::parseRF433Config(const JsonObject& endpointConfig, unsigned long& onCode, unsigned long& offCode,
+                                    int& protocol, int& pulseLength, int& bitLength) {
+    // Check for RF codes object
+    JsonObject rfCodes = endpointConfig["rf_codes"];
+    if (rfCodes.isNull()) {
+        LOG_ERROR("RF433Manager", "Missing rf_codes in endpoint config");
+        return false;
     }
+
+    // Parse ON code (required)
+    onCode = rfCodes["on"] | 0UL;
+    if (onCode == 0) {
+        LOG_ERROR("RF433Manager", "Missing or invalid 'on' code");
+        return false;
+    }
+
+    // Parse OFF code (optional for toggle devices)
+    offCode = rfCodes["off"] | 0UL;
+
+    // Parse protocol parameters
+    protocol = endpointConfig["protocol"] | 1;
+    pulseLength = endpointConfig["pulse_length"] | 0;
+    bitLength = endpointConfig["bit_length"] | 24;
+
+    return true;
 }

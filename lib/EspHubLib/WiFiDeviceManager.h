@@ -1,17 +1,27 @@
 #ifndef WIFI_DEVICE_MANAGER_H
 #define WIFI_DEVICE_MANAGER_H
 
-#include "DeviceManager.h"
+#include "ProtocolManagerInterface.h"
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
 #include <map>
 #include <functional>
 
 /**
- * WiFiDeviceManager - Generic manager for WiFi-connected devices
+ * WiFiDeviceManager - Protocol manager for WiFi-connected devices
  *
- * Supports JSON-based device configuration allowing flexible integration
- * with various WiFi devices without hardcoding device types.
+ * Implements the ProtocolManagerInterface to provide transport layer
+ * for WiFi/HTTP/HTTPS device communication.
+ *
+ * Responsibilities:
+ * - HTTP/HTTPS request handling
+ * - MQTT integration (via MqttManager)
+ * - Connection management
+ * - Value parsing and formatting
+ *
+ * Does NOT:
+ * - Store device configurations (done by DeviceConfigManager)
+ * - Register IO points in DeviceRegistry (done by DeviceConfigManager)
  *
  * Supported Connection Types:
  * - HTTP/HTTPS REST APIs
@@ -24,10 +34,6 @@
  * - Shelly devices
  * - Sonoff devices
  * - Custom HTTP API devices
- *
- * Hierarchical naming:
- *   {location}.wifi.{device_id}.{endpoint}.{datatype}
- *   Example: kitchen.wifi.sonoff_1.relay.bool
  */
 
 // Forward declarations
@@ -108,36 +114,30 @@ struct WiFiDeviceConfig {
     unsigned long lastSeen;
 };
 
-class WiFiDeviceManager : public DeviceManager {
+class WiFiDeviceManager : public ProtocolManagerInterface {
 public:
     WiFiDeviceManager(MqttManager* mqttManager = nullptr);
     ~WiFiDeviceManager();
 
-    // DeviceManager interface
+    // ProtocolManagerInterface implementation
     void begin() override;
     void loop() override;
 
-    // Device configuration
-    bool loadDeviceFromJson(const JsonObject& config);
-    bool loadDeviceFromFile(const String& filepath);
-    bool saveDeviceToFile(const String& deviceId, const String& filepath);
-    bool removeDevice(const String& deviceId);
+    bool initializeDevice(const String& deviceId, const JsonObject& connectionConfig) override;
+    bool removeDevice(const String& deviceId) override;
 
-    // Device access
-    WiFiDeviceConfig* getDevice(const String& deviceId);
-    std::vector<String> getAllDeviceIds() const;
+    bool readEndpoint(const String& deviceId, const JsonObject& endpointConfig, PlcValue& value) override;
+    bool writeEndpoint(const String& deviceId, const JsonObject& endpointConfig, const PlcValue& value) override;
 
-    // Endpoint operations
-    bool readEndpoint(const String& deviceId, const String& endpointName);
-    bool writeEndpoint(const String& deviceId, const String& endpointName, const PlcValue& value);
+    bool testConnection(const JsonObject& connectionConfig) override;
+    bool testEndpoint(const String& deviceId, const JsonObject& endpointConfig) override;
+
+    String getProtocolName() const override { return "wifi"; }
+    bool isDeviceOnline(const String& deviceId) override;
 
     // Polling configuration
     void setGlobalPollingInterval(uint32_t ms) { globalPollingInterval = ms; }
     uint32_t getGlobalPollingInterval() const { return globalPollingInterval; }
-
-    // Testing
-    bool testDeviceConnection(const WiFiDeviceConfig& config);
-    bool testEndpoint(const WiFiDeviceConfig& config, const String& endpointName);
 
 private:
     MqttManager* mqttManager;
@@ -145,21 +145,27 @@ private:
     HTTPClient httpClient;
     uint32_t globalPollingInterval;
 
+    // Internal device management
+    WiFiDeviceConfig* getDevice(const String& deviceId);
+    EndpointConfig* getEndpointConfig(const String& deviceId, const String& endpointName);
+
     // HTTP operations
-    bool httpRequest(const WiFiDeviceConfig& device, HttpMethod method,
-                    const String& path, const String& body, String& response);
+    bool httpRequest(const String& host, int port, bool useSsl,
+                    const String& authUsername, const String& authPassword,
+                    HttpMethod method, const String& path, const String& body, String& response);
     bool extractJsonValue(const String& json, const String& path, PlcValue& value, PlcValueType type);
-    String formatWriteValue(const PlcValue& value, const EndpointConfig& endpoint);
+    String formatWriteValue(const PlcValue& value, PlcValueType datatype, const JsonObject& endpointConfig);
 
     // Endpoint management
     void pollEndpoints();
-    void registerEndpointInRegistry(const String& deviceId, const EndpointConfig& endpointConfig);
-    void updateEndpointValue(const String& deviceId, const String& endpointName, const PlcValue& value);
 
     // Parsing helpers
     ConnectionType parseConnectionType(const String& type);
     HttpMethod parseHttpMethod(const String& method);
     PlcValueType parseDatatype(const String& type);
+
+    // Configuration parsing from JSON
+    bool parseEndpointConfig(const JsonObject& json, EndpointConfig& endpoint);
 };
 
 #endif // WIFI_DEVICE_MANAGER_H
