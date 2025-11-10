@@ -41,6 +41,7 @@ extern StreamLogger* EspHubLog; // Declare EspHubLog
 #include "blocks/conversion/BlockInt16ToFloat.h"
 #include "blocks/conversion/BlockInt32ToDouble.h"
 #include "blocks/logic/BlockSequencer.h"
+#include "blocks/events/BlockStatusHandler.h"
 
 
 PlcProgram::PlcProgram(const String& name, TimeManager* timeManager, MeshDeviceManager* meshDeviceManager)
@@ -181,6 +182,8 @@ bool PlcProgram::loadConfiguration(const char* jsonConfig) {
                 block = std::make_unique<BlockInt32ToDouble>();
             } else if (strcmp(type, "SEQUENCER") == 0) {
                 block = std::make_unique<BlockSequencer>();
+            } else if (strcmp(type, "StatusHandler") == 0) {
+                block = std::make_unique<BlockStatusHandler>();
             }
             // Add other block types here with else if
 

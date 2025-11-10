@@ -1,10 +1,11 @@
 #include "PlcMemory.h"
 #include "Preferences.h"
 #include <StreamLogger.h> // Include for EspHubLog
+#include <DeviceRegistry.h> // Include for IO point integration
 
 extern StreamLogger* EspHubLog; // Declare EspHubLog
 
-PlcMemory::PlcMemory() {}
+PlcMemory::PlcMemory() : deviceRegistry(nullptr) {}
 
 void PlcMemory::begin() {
     loadRetentiveMemory();
@@ -202,3 +203,133 @@ template uint32_t PlcMemory::getValue<uint32_t>(const std::string& name, uint32_
 template float PlcMemory::getValue<float>(const std::string& name, float defaultValue);
 template double PlcMemory::getValue<double>(const std::string& name, double defaultValue);
 // String specialization defined above
+
+// ========== IO Point Management Implementation ==========
+
+void PlcMemory::setDeviceRegistry(DeviceRegistry* registry) {
+    deviceRegistry = registry;
+    EspHubLog->println("PlcMemory: DeviceRegistry connected");
+}
+
+bool PlcMemory::registerIOPoint(const std::string& plcVarName, const std::string& endpointName,
+                                IODirection direction, bool requiresFunction,
+                                const std::string& functionName, bool autoSync) {
+    if (!deviceRegistry) {
+        EspHubLog->println("ERROR: DeviceRegistry not set in PlcMemory");
+        return false;
+    }
+
+    // Check if PLC variable exists
+    if (!memoryMap.count(plcVarName)) {
+        EspHubLog->printf("ERROR: PLC variable '%s' not declared\n", plcVarName.c_str());
+        return false;
+    }
+
+    // Create IO point structure
+    PlcIOPoint ioPoint;
+    ioPoint.plcVarName = String(plcVarName.c_str());
+    ioPoint.mappedEndpoint = String(endpointName.c_str());
+    ioPoint.direction = direction;
+    ioPoint.requiresFunction = requiresFunction;
+    ioPoint.functionName = String(functionName.c_str());
+    ioPoint.autoSync = autoSync;
+
+    // Register with DeviceRegistry
+    bool result = deviceRegistry->registerIOPoint(ioPoint);
+    if (result) {
+        EspHubLog->printf("Registered IO point: %s <-> %s (%s)\n",
+                         plcVarName.c_str(),
+                         endpointName.c_str(),
+                         (direction == IODirection::IO_INPUT) ? "INPUT" : "OUTPUT");
+    }
+    return result;
+}
+
+bool PlcMemory::unregisterIOPoint(const std::string& plcVarName) {
+    if (!deviceRegistry) {
+        return false;
+    }
+    return deviceRegistry->unregisterIOPoint(String(plcVarName.c_str()));
+}
+
+PlcIOPoint* PlcMemory::getIOPoint(const std::string& plcVarName) {
+    if (!deviceRegistry) {
+        return nullptr;
+    }
+    return deviceRegistry->getIOPoint(String(plcVarName.c_str()));
+}
+
+bool PlcMemory::isEndpointOnline(const std::string& endpointName) {
+    if (!deviceRegistry) {
+        return false;
+    }
+    Endpoint* endpoint = deviceRegistry->getEndpoint(String(endpointName.c_str()));
+    return endpoint ? endpoint->isOnline : false;
+}
+
+PlcValue PlcMemory::getValueAsPlcValue(const std::string& name) {
+    PlcValue result;
+    if (!memoryMap.count(name)) {
+        return result; // Return default bool value
+    }
+
+    PlcVariable& var = memoryMap[name];
+    result.type = var.type;
+    result.value = var.value;
+    return result;
+}
+
+void PlcMemory::syncIOPoints() {
+    if (!deviceRegistry) {
+        return;
+    }
+
+    auto allIOPoints = deviceRegistry->getAllIOPoints();
+
+    for (PlcIOPoint* ioPoint : allIOPoints) {
+        if (!ioPoint || !ioPoint->autoSync) {
+            continue;
+        }
+
+        std::string plcVarName = ioPoint->plcVarName.c_str();
+        String endpointName = ioPoint->mappedEndpoint;
+
+        // Check if endpoint exists and is online
+        Endpoint* endpoint = deviceRegistry->getEndpoint(endpointName);
+        if (!endpoint || !endpoint->isOnline) {
+            continue; // Skip offline endpoints
+        }
+
+        if (ioPoint->direction == IODirection::IO_INPUT) {
+            // INPUT: Copy from endpoint to PLC variable
+            if (memoryMap.count(plcVarName)) {
+                PlcVariable& var = memoryMap[plcVarName];
+                const PlcValue& endpointValue = endpoint->currentValue;
+
+                // Verify type compatibility
+                if (var.type != endpointValue.type) {
+                    EspHubLog->printf("WARNING: Type mismatch for %s: PLC=%d, Endpoint=%d\n",
+                                     plcVarName.c_str(),
+                                     (int)var.type,
+                                     (int)endpointValue.type);
+                    continue;
+                }
+
+                // Copy value from endpoint to PLC
+                var.value = endpointValue.value;
+            }
+        } else {
+            // OUTPUT: Copy from PLC variable to endpoint
+            // Note: For outputs with requiresFunction=true, this should only be
+            // called through dedicated function blocks, not here
+            if (ioPoint->requiresFunction) {
+                continue; // Skip outputs that require function calls
+            }
+
+            if (memoryMap.count(plcVarName)) {
+                PlcValue plcValue = getValueAsPlcValue(plcVarName);
+                deviceRegistry->updateEndpointValue(endpointName, plcValue);
+            }
+        }
+    }
+}

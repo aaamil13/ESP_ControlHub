@@ -22,6 +22,20 @@ union PlcValueUnion {
     PlcValueUnion() : bVal(false) {}
 };
 
+// PlcValue - type-safe value container for endpoint integration
+struct PlcValue {
+    PlcValueUnion value;
+    PlcValueType type;
+
+    PlcValue() : type(PlcValueType::BOOL) {
+        value.bVal = false;
+    }
+
+    PlcValue(PlcValueType t) : type(t) {
+        value.bVal = false; // Initialize to zero
+    }
+};
+
 struct PlcVariable {
     PlcValueUnion value;
     PlcValueType valueType; // To track which member of the union is active
@@ -29,6 +43,11 @@ struct PlcVariable {
     bool isRetentive;
     String mesh_link; // Identifier for mesh-linked variables
 };
+
+// Forward declarations
+class DeviceRegistry;
+enum class IODirection;
+struct PlcIOPoint;
 
 class PlcMemory {
 public:
@@ -46,8 +65,20 @@ public:
     void saveRetentiveMemory();
     void clear(); // New method
 
+    // IO Point Management - Integration with DeviceRegistry
+    void setDeviceRegistry(DeviceRegistry* registry);
+    bool registerIOPoint(const std::string& plcVarName, const std::string& endpointName,
+                        IODirection direction, bool requiresFunction = false,
+                        const std::string& functionName = "", bool autoSync = true);
+    bool unregisterIOPoint(const std::string& plcVarName);
+    PlcIOPoint* getIOPoint(const std::string& plcVarName);
+    bool isEndpointOnline(const std::string& endpointName);
+    void syncIOPoints(); // Sync between PLC variables and endpoints
+    PlcValue getValueAsPlcValue(const std::string& name); // Get value as PlcValue struct
+
 private:
     std::map<std::string, PlcVariable> memoryMap;
+    DeviceRegistry* deviceRegistry;
     void loadRetentiveMemory();
 };
 
