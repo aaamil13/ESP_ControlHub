@@ -1,11 +1,23 @@
 #include "WebManager.h"
+#include <LittleFS.h>
+#include "StreamLogger.h"
+
+// Define LITTLEFS as an alias for LittleFS if not already defined
+#ifndef LITTLEFS
+#define LITTLEFS LittleFS
+#endif
+
+extern StreamLogger* EspHubLog;
+
+WebManager* WebManager::instance = nullptr;
 
 WebManager::WebManager(PlcEngine* plcEngine, MeshDeviceManager* meshDeviceManager) : server(80), ws("/ws"), _plcEngine(plcEngine), _meshDeviceManager(meshDeviceManager) {
+    instance = this;
 }
 
 void WebManager::begin() {
     if(!LITTLEFS.begin()){
-        Log->println("An Error has occurred while mounting LITTLEFS");
+        EspHubLog->println("An Error has occurred while mounting LittleFS");
         return;
     }
 
@@ -25,33 +37,10 @@ void WebManager::begin() {
         request->send(LITTLEFS, "/plc_config.html", "text/html");
     });
 
-    server.on("/plc_config", HTTP_POST, [&](AsyncWebServerRequest *request){
-        // Handle PLC config upload here
-        if (_plcEngine && request->hasParam("plc_config_file", true, true)) {
-            AsyncWebUpload* upload = request->upload();
-            if (upload->status == UPLOAD_FILE_START) {
-                Log->printf("Receiving PLC config file: %s\n", upload->filename.c_str());
-                // Open file for writing
-            } else if (upload->status == UPLOAD_FILE_WRITE) {
-                // Write data to file
-            } else if (upload->status == UPLOAD_FILE_END) {
-                Log->printf("PLC config file received. Size: %u\n", upload->totalSize);
-                // Read file content and load into PLC
-                // For now, just acknowledge
-                request->send(200, "text/plain", "PLC Config Uploaded. Processing...");
-            }
-        } else {
-            request->send(400, "text/plain", "No file uploaded or PLC Engine not available.");
-        }
-    }, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
-        // This lambda is for handling the actual file data
-        // For now, we'll just log it. In a real scenario, you'd write to a file.
-        if (final) {
-            Log->printf("Final chunk of %s received. Total size: %u\n", filename.c_str(), index + len);
-            // Here, you would read the entire file from LITTLEFS and pass it to plcEngine->loadConfiguration()
-            // For demonstration, we'll just log the final message.
-        }
-    });
+    // TODO: Implement file upload for PLC configuration
+    // File upload functionality requires AsyncWebUpload support
+    // server.on("/plc_config", HTTP_POST, ...);
+
 
     // New route for PLC monitoring
     server.on("/plc_monitor", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -59,19 +48,23 @@ void WebManager::begin() {
     });
 
     server.on("/plc_command", HTTP_POST, [&](AsyncWebServerRequest *request){
-        if (request->hasParam("command", false, true)) {
+        if (request->hasParam("command", false, true) && request->hasParam("program", false, true)) {
             String command = request->getParam("command", false, true)->value();
+            String programName = request->getParam("program", false, true)->value();
             if (command == "run") {
-                _plcEngine->run();
+                _plcEngine->runProgram(programName);
                 request->send(200, "text/plain", "PLC Run command sent.");
             } else if (command == "stop") {
-                _plcEngine->stop();
+                _plcEngine->stopProgram(programName);
                 request->send(200, "text/plain", "PLC Stop command sent.");
+            } else if (command == "pause") {
+                _plcEngine->pauseProgram(programName);
+                request->send(200, "text/plain", "PLC Pause command sent.");
             } else {
                 request->send(400, "text/plain", "Unknown PLC command.");
             }
         } else {
-            request->send(400, "text/plain", "No command specified.");
+            request->send(400, "text/plain", "Missing command or program parameter.");
         }
     });
 
@@ -93,9 +86,10 @@ void WebManager::begin() {
 
     server.serveStatic("/", LITTLEFS, "/");
 
-    AsyncElegantOTA.begin(&server);    // Start ElegantOTA
+    // TODO: Add AsyncElegantOTA library for OTA updates
+    // AsyncElegantOTA.begin(&server);    // Start ElegantOTA
     server.begin();
-    Log->println("Web server started. OTA available at /update");
+    EspHubLog->println("Web server started.");
 }
 
 void WebManager::log(const String& message) {
@@ -104,10 +98,10 @@ void WebManager::log(const String& message) {
 
 void WebManager::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
     if(type == WS_EVT_CONNECT){
-        Log->printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+        EspHubLog->printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
         client->text("Welcome!");
     } else if(type == WS_EVT_DISCONNECT){
-        Log->printf("WebSocket client #%u disconnected\n", client->id());
+        EspHubLog->printf("WebSocket client #%u disconnected\n", client->id());
     } else if (type == WS_EVT_DATA) {
         AwsFrameInfo *info = (AwsFrameInfo*)arg;
         if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
@@ -115,7 +109,7 @@ void WebManager::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
             StaticJsonDocument<200> doc;
             DeserializationError error = deserializeJson(doc, message);
             if (error) {
-                Log->printf("deserializeJson() failed for WebSocket message: %s\n", error.c_str());
+                EspHubLog->printf("deserializeJson() failed for WebSocket message: %s\n", error.c_str());
                 return;
             }
 
@@ -123,7 +117,13 @@ void WebManager::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
             if (strcmp(request_type, "plc_status") == 0) {
                 StaticJsonDocument<100> response;
                 response["type"] = "plc_status";
-                response["state"] = (instance->_plcEngine->getState() == PlcState::RUNNING) ? "RUNNING" : "STOPPED";
+                // Get main program status
+                PlcProgram* mainProgram = instance->_plcEngine->getProgram("main_program");
+                if (mainProgram) {
+                    response["state"] = (mainProgram->getState() == PlcProgramState::RUNNING) ? "RUNNING" : "STOPPED";
+                } else {
+                    response["state"] = "NO_PROGRAM";
+                }
                 String response_str;
                 serializeJson(response, response_str);
                 client->text(response_str);

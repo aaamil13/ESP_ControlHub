@@ -8,6 +8,16 @@
 #include <esp_task_wdt.h>
 #include <vector>
 #include <memory>
+
+// Polyfill for std::make_unique if not available in C++11
+#if __cplusplus < 201402L
+namespace std {
+    template<typename T, typename... Args>
+    unique_ptr<T> make_unique(Args&&... args) {
+        return unique_ptr<T>(new T(std::forward<Args>(args)...));
+    }
+}
+#endif
 #include <TimeManager.h> // For scheduler blocks
 #include <MeshDeviceManager.h> // For sending commands to mesh devices
 #include "PlcProgram.h" // New PlcProgram class

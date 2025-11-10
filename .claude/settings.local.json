@@ -4,7 +4,8 @@
       "Bash(tree:*)",
       "Bash(platformio run)",
       "Bash(dir:*)",
-      "Bash(platformio run:*)"
+      "Bash(platformio run:*)",
+      "Bash(powershell -Command:*)"
     ],
     "deny": [],
     "ask": []

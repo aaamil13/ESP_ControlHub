@@ -1,8 +1,8 @@
 #include "UserManager.h"
-#include "StreamLogger.h" // For Log
+#include "StreamLogger.h"
 #include <mbedtls/md.h> // For SHA256 hashing
 
-extern StreamLogger* Log;
+extern StreamLogger* EspHubLog;
 
 UserManager::UserManager() {
 }
@@ -12,7 +12,7 @@ void UserManager::begin() {
     if (users.empty()) {
         // Create default admin user if no users exist
         addUser("admin", "admin", ROLE_ADMIN);
-        Log->println("Created default admin user: admin/admin");
+        EspHubLog->println("Created default admin user: admin/admin");
     }
 }
 
@@ -25,7 +25,7 @@ bool UserManager::authenticate(const String& username, const String& password) {
 
 bool UserManager::addUser(const String& username, const String& password, UserRole role) {
     if (users.count(username)) {
-        Log->printf("ERROR: User '%s' already exists.\n", username.c_str());
+        EspHubLog->printf("ERROR: User '%s' already exists.\n", username.c_str());
         return false;
     }
     User newUser;
@@ -34,7 +34,7 @@ bool UserManager::addUser(const String& username, const String& password, UserRo
     newUser.role = role;
     users[username] = newUser;
     saveUsers();
-    Log->printf("User '%s' added with role %d.\n", username.c_str(), role);
+    EspHubLog->printf("User '%s' added with role %d.\n", username.c_str(), role);
     return true;
 }
 
@@ -42,10 +42,10 @@ bool UserManager::deleteUser(const String& username) {
     if (users.count(username)) {
         users.erase(username);
         saveUsers();
-        Log->printf("User '%s' deleted.\n", username.c_str());
+        EspHubLog->printf("User '%s' deleted.\n", username.c_str());
         return true;
     }
-    Log->printf("ERROR: User '%s' not found.\n", username.c_str());
+    EspHubLog->printf("ERROR: User '%s' not found.\n", username.c_str());
     return false;
 }
 
@@ -54,13 +54,13 @@ bool UserManager::changePassword(const String& username, const String& oldPasswo
         if (authenticate(username, oldPassword)) {
             users[username].passwordHash = hashPassword(newPassword);
             saveUsers();
-            Log->printf("Password for user '%s' changed.\n", username.c_str());
+            EspHubLog->printf("Password for user '%s' changed.\n", username.c_str());
             return true;
         }
-        Log->printf("ERROR: Incorrect old password for user '%s'.\n", username.c_str());
+        EspHubLog->printf("ERROR: Incorrect old password for user '%s'.\n", username.c_str());
         return false;
     }
-    Log->printf("ERROR: User '%s' not found.\n", username.c_str());
+    EspHubLog->printf("ERROR: User '%s' not found.\n", username.c_str());
     return false;
 }
 
@@ -78,15 +78,22 @@ void UserManager::loadUsers() {
     size_t count = preferences.getUInt("user_count", 0);
     for (size_t i = 0; i < count; ++i) {
         String userKey = "user_" + String(i);
-        String username = preferences.getString(userKey + "_name", "");
-        String passwordHash = preferences.getString(userKey + "_hash", "");
-        UserRole role = static_cast<UserRole>(preferences.getUChar(userKey + "_role", ROLE_MONITOR));
-        if (!username.isEmpty()) {
-            users[username] = {username, passwordHash, role};
+        String nameKey = userKey + "_name";
+        String hashKey = userKey + "_hash";
+        String roleKey = userKey + "_role";
+
+        char username[32] = {0};
+        char passwordHash[65] = {0};
+        preferences.getString(nameKey.c_str(), username, sizeof(username));
+        preferences.getString(hashKey.c_str(), passwordHash, sizeof(passwordHash));
+        UserRole role = static_cast<UserRole>(preferences.getUChar(roleKey.c_str(), ROLE_MONITOR));
+
+        if (username[0] != '\0') {
+            users[String(username)] = {String(username), String(passwordHash), role};
         }
     }
     preferences.end();
-    Log->printf("Loaded %u users.\n", users.size());
+    EspHubLog->printf("Loaded %u users.\n", users.size());
 }
 
 void UserManager::saveUsers() {
@@ -98,13 +105,17 @@ void UserManager::saveUsers() {
     size_t i = 0;
     for (auto const& [username, user] : users) {
         String userKey = "user_" + String(i);
-        preferences.putString(userKey + "_name", user.username);
-        preferences.putString(userKey + "_hash", user.passwordHash);
-        preferences.putUChar(userKey + "_role", user.role);
+        String nameKey = userKey + "_name";
+        String hashKey = userKey + "_hash";
+        String roleKey = userKey + "_role";
+
+        preferences.putString(nameKey.c_str(), user.username.c_str());
+        preferences.putString(hashKey.c_str(), user.passwordHash.c_str());
+        preferences.putUChar(roleKey.c_str(), user.role);
         i++;
     }
     preferences.end();
-    Log->printf("Saved %u users.\n", users.size());
+    EspHubLog->printf("Saved %u users.\n", users.size());
 }
 
 String UserManager::hashPassword(const String& password) {

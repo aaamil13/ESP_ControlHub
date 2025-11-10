@@ -1,4 +1,7 @@
 #include "AppManager.h"
+#include "StreamLogger.h"
+
+extern StreamLogger* EspHubLog;
 
 AppManager::AppManager() : _plcEngine(nullptr), _server(nullptr) {
 }

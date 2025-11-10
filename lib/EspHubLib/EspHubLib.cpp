@@ -56,10 +56,11 @@ void EspHub::mqttCallback(char* topic, byte* payload, unsigned int length) {
     // Handle MQTT messages here, e.g., for OTA updates or PLC control
     EspHubLog->printf("MQTT message received on topic: %s\n", topic);
     // Example: Check for OTA update topic
-    if (otaManager.handleMqttMessage(topic, payload, length)) {
-        EspHubLog->println("OTA update initiated via MQTT.");
-        return;
-    }
+    // TODO: Implement handleMqttMessage in OtaManager
+    // if (otaManager.handleMqttMessage(topic, payload, length)) {
+    //     EspHubLog->println("OTA update initiated via MQTT.");
+    //     return;
+    // }
 
     // Example: PLC control messages
     if (String(topic) == "esphub/plc/control") {
@@ -137,9 +138,9 @@ void EspHub::factoryReset() {
     preferences.clear();
     preferences.end();
 
-    // Clear WiFiManager settings
-    WiFiManager wm;
-    wm.resetSettings();
+    // Note: WiFiManager removed due to conflict with ESPAsyncWebServer
+    // WiFi settings can be cleared manually via WiFi.disconnect(true, true);
+    WiFi.disconnect(true, true); // Clear WiFi credentials
 
     EspHubLog->println("Factory reset complete. Restarting...");
     ESP.restart();

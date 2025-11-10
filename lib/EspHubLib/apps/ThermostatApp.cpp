@@ -1,7 +1,7 @@
 #include "ThermostatApp.h"
-#include "../../StreamLogger.h" // For Log
+#include <StreamLogger.h>
 
-extern StreamLogger* Log;
+extern StreamLogger* EspHubLog;
 
 ThermostatApp::ThermostatApp() : _setpoint(20.0f), _hysteresis(0.5f) {
 }
@@ -13,13 +13,13 @@ bool ThermostatApp::configure(const JsonObject& config, PlcEngine& plcEngine) {
     _hysteresis = config["hysteresis"] | 0.5f;
 
     // Declare PLC variables needed by this app
-    plcEngine.getMemory().declareVariable(_tempSensorVar, PlcDataType::REAL, false);
-    plcEngine.getMemory().declareVariable(_heaterOutputVar, PlcDataType::BOOL, true); // Heater output should be retentive
+    plcEngine.getMemory().declareVariable(_tempSensorVar, PlcValueType::REAL, false);
+    plcEngine.getMemory().declareVariable(_heaterOutputVar, PlcValueType::BOOL, true); // Heater output should be retentive
 
     // Here, we would dynamically generate PLC logic blocks for the thermostat
     // For example, using GT and LT blocks to compare temperature with setpoint and hysteresis
     // This is a simplified example, a full implementation would add these blocks to the PlcEngine's logic_blocks
-    Log->printf("ThermostatApp configured: Temp Sensor: %s, Heater Output: %s, Setpoint: %.1f, Hysteresis: %.1f\n",
+    EspHubLog->printf("ThermostatApp configured: Temp Sensor: %s, Heater Output: %s, Setpoint: %.1f, Hysteresis: %.1f\n",
                 _tempSensorVar.c_str(), _heaterOutputVar.c_str(), _setpoint, _hysteresis);
     return true;
 }
@@ -45,9 +45,9 @@ void ThermostatApp::update() {
 
     // if (currentTemp < (_setpoint - _hysteresis / 2.0f) && !heaterState) {
     //     _plcEngine->getMemory().setValue<bool>(_heaterOutputVar, true); // Turn heater on
-    //     Log->printf("Thermostat: Temp %.1f < Setpoint %.1f, turning heater ON\n", currentTemp, _setpoint);
+    //     EspHubLog->printf("Thermostat: Temp %.1f < Setpoint %.1f, turning heater ON\n", currentTemp, _setpoint);
     // } else if (currentTemp > (_setpoint + _hysteresis / 2.0f) && heaterState) {
     //     _plcEngine->getMemory().setValue<bool>(_heaterOutputVar, false); // Turn heater off
-    //     Log->printf("Thermostat: Temp %.1f > Setpoint %.1f, turning heater OFF\n", currentTemp, _setpoint);
+    //     EspHubLog->printf("Thermostat: Temp %.1f > Setpoint %.1f, turning heater OFF\n", currentTemp, _setpoint);
     // }
 }

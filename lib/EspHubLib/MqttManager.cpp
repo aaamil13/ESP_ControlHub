@@ -1,5 +1,13 @@
 #include "MqttManager.h"
-#include "LITTLEFS.h" // For loading certificates
+#include <LittleFS.h>
+#include "StreamLogger.h"
+
+// Define LITTLEFS as an alias for LittleFS if not already defined
+#ifndef LITTLEFS
+#define LITTLEFS LittleFS
+#endif
+
+extern StreamLogger* EspHubLog;
 
 MqttManager::MqttManager() : mqttClient(wifiClient) {
 }

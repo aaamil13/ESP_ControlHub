@@ -43,10 +43,10 @@ bool PlcMemory::setValue(const std::string& name, T val) {
     // This would ideally involve more robust type checking at runtime or design time
     switch (var.type) {
         case PlcValueType::BOOL: var.value.bVal = (bool)val; break;
-        case PlcValueType::BYTE: var.value.ui8Val = (uint8_t)val; break;
-        case PlcValueType::INT: var.value.i16Val = (int16_t)val; break;
-        case PlcValueType::DINT: var.value.ui32Val = (uint32_t)val; break;
-        case PlcValueType::REAL: var.value.fVal = (float)val; break;
+        case PlcValueType::BYTE: var.value.ui8Val = static_cast<uint8_t>(val); break;
+        case PlcValueType::INT: var.value.i16Val = static_cast<int16_t>(val); break;
+        case PlcValueType::DINT: var.value.ui32Val = static_cast<uint32_t>(val); break;
+        case PlcValueType::REAL: var.value.fVal = static_cast<float>(val); break;
         case PlcValueType::STRING_TYPE: strncpy(var.value.sVal, String(val).c_str(), sizeof(var.value.sVal) - 1); var.value.sVal[sizeof(var.value.sVal) - 1] = '\0'; break;
     }
     return true;
@@ -59,12 +59,19 @@ T PlcMemory::getValue(const std::string& name, T defaultValue) {
     }
     PlcVariable& var = memoryMap[name];
     switch (var.type) {
-        case PlcValueType::BOOL: return (T)var.value.bVal;
-        case PlcValueType::BYTE: return (T)var.value.ui8Val;
-        case PlcValueType::INT: return (T)var.value.i16Val;
-        case PlcValueType::DINT: return (T)var.value.ui32Val;
-        case PlcValueType::REAL: return (T)var.value.fVal;
-        case PlcValueType::STRING_TYPE: return (T)String(var.value.sVal);
+        case PlcValueType::BOOL: return static_cast<T>(var.value.bVal);
+        case PlcValueType::BYTE: return static_cast<T>(var.value.ui8Val);
+        case PlcValueType::INT: return static_cast<T>(var.value.i16Val);
+        case PlcValueType::DINT: return static_cast<T>(var.value.ui32Val);
+        case PlcValueType::REAL: return static_cast<T>(var.value.fVal);
+        case PlcValueType::STRING_TYPE: {
+            // Special handling for String type to avoid invalid cast
+            if constexpr (std::is_same<T, String>::value) {
+                return String(var.value.sVal);
+            } else {
+                return defaultValue; // Can't convert string to numeric type
+            }
+        }
     }
     return defaultValue; // Should not reach here
 }
@@ -146,17 +153,52 @@ void PlcMemory::clear() {
     memoryMap.clear();
 }
 
+// Template specialization for String type to avoid invalid casts
+template<>
+bool PlcMemory::setValue<String>(const std::string& name, String val) {
+    if (!memoryMap.count(name)) {
+        return false;
+    }
+    PlcVariable& var = memoryMap[name];
+    if (var.type == PlcValueType::STRING_TYPE) {
+        strncpy(var.value.sVal, val.c_str(), sizeof(var.value.sVal) - 1);
+        var.value.sVal[sizeof(var.value.sVal) - 1] = '\0';
+        return true;
+    }
+    return false; // Type mismatch
+}
+
+template<>
+String PlcMemory::getValue<String>(const std::string& name, String defaultValue) {
+    if (!memoryMap.count(name)) {
+        return defaultValue;
+    }
+    PlcVariable& var = memoryMap[name];
+    if (var.type == PlcValueType::STRING_TYPE) {
+        return String(var.value.sVal);
+    }
+    return defaultValue; // Type mismatch
+}
+
 // Explicit template instantiations
 template bool PlcMemory::setValue<bool>(const std::string& name, bool val);
+template bool PlcMemory::setValue<int8_t>(const std::string& name, int8_t val);
 template bool PlcMemory::setValue<uint8_t>(const std::string& name, uint8_t val);
 template bool PlcMemory::setValue<int16_t>(const std::string& name, int16_t val);
+template bool PlcMemory::setValue<uint16_t>(const std::string& name, uint16_t val);
+template bool PlcMemory::setValue<int32_t>(const std::string& name, int32_t val);
 template bool PlcMemory::setValue<uint32_t>(const std::string& name, uint32_t val);
 template bool PlcMemory::setValue<float>(const std::string& name, float val);
-template bool PlcMemory::setValue<String>(const std::string& name, String val);
+template bool PlcMemory::setValue<double>(const std::string& name, double val);
+// String specialization defined above
 
 template bool PlcMemory::getValue<bool>(const std::string& name, bool defaultValue);
+template int8_t PlcMemory::getValue<int8_t>(const std::string& name, int8_t defaultValue);
 template uint8_t PlcMemory::getValue<uint8_t>(const std::string& name, uint8_t defaultValue);
 template int16_t PlcMemory::getValue<int16_t>(const std::string& name, int16_t defaultValue);
+template uint16_t PlcMemory::getValue<uint16_t>(const std::string& name, uint16_t defaultValue);
+template int32_t PlcMemory::getValue<int32_t>(const std::string& name, int32_t defaultValue);
 template uint32_t PlcMemory::getValue<uint32_t>(const std::string& name, uint32_t defaultValue);
 template float PlcMemory::getValue<float>(const std::string& name, float defaultValue);
-template String PlcMemory::getValue<String>(const std::string& name, String defaultValue);
+template double PlcMemory::getValue<double>(const std::string& name, double defaultValue);
+// String specialization defined above

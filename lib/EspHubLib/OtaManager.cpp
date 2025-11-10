@@ -1,28 +1,20 @@
 #include "OtaManager.h"
+#include "StreamLogger.h"
 
-extern StreamLogger* Log;
+extern StreamLogger* EspHubLog;
 
 OtaManager::OtaManager() {
 }
 
 void OtaManager::begin() {
-    // Optional: Set up OTA event handlers for more detailed logging
-    Update.onStart([](){
-        Log->println("OTA update started!");
-    });
-    Update.onEnd([](){
-        Log->println("OTA update finished!");
-    });
-    Update.onError([](int error){
-        Log->printf("OTA update error: %d\n", error);
-    });
-    Update.onProgress([](size_t current, size_t total){
-        Log->printf("OTA progress: %u%%\n", (current * 100) / total);
-    });
+    // Note: Update event handlers (onStart, onEnd, onError, onProgress)
+    // are not available in all ESP32 core versions
+    // Logging is done inline in startOtaUpdate() instead
+    EspHubLog->println("OtaManager initialized");
 }
 
 void OtaManager::startOtaUpdate(const String& firmwareUrl) {
-    Log->printf("Starting OTA update from: %s\n", firmwareUrl.c_str());
+    EspHubLog->printf("Starting OTA update from: %s\n", firmwareUrl.c_str());
 
     if (_otaClient.connect(firmwareUrl.c_str(), 80)) { // Assuming HTTP for now
         HTTPClient http;
@@ -37,24 +29,24 @@ void OtaManager::startOtaUpdate(const String& firmwareUrl) {
                 WiFiClient& client = http.getStream();
                 size_t written = Update.writeStream(client);
                 if (written == contentLength) {
-                    Log->println("Written : " + String(written) + " successfully");
+                    EspHubLog->println("Written : " + String(written) + " successfully");
                 } else {
-                    Log->println("Written only : " + String(written) + "/" + String(contentLength) + ". Retry?");
+                    EspHubLog->println("Written only : " + String(written) + "/" + String(contentLength) + ". Retry?");
                 }
                 if (Update.end()) {
-                    Log->println("OTA update finished successfully. Restarting...");
+                    EspHubLog->println("OTA update finished successfully. Restarting...");
                     ESP.restart();
                 } else {
-                    Log->printf("OTA update failed: %u\n", Update.getError());
+                    EspHubLog->printf("OTA update failed: %u\n", Update.getError());
                 }
             } else {
-                Log->println("Not enough space to begin OTA");
+                EspHubLog->println("Not enough space to begin OTA");
             }
         } else {
-            Log->printf("HTTP GET failed: %s\n", http.errorToString(httpCode).c_str());
+            EspHubLog->printf("HTTP GET failed: %s\n", http.errorToString(httpCode).c_str());
         }
         http.end();
     } else {
-        Log->printf("Failed to connect to OTA server: %s\n", firmwareUrl.c_str());
+        EspHubLog->printf("Failed to connect to OTA server: %s\n", firmwareUrl.c_str());
     }
 }

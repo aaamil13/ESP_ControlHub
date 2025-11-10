@@ -1,5 +1,7 @@
 #include "BlockSequencer.h"
-#include <StreamLogger.h> // For Log
+#include <StreamLogger.h>
+
+extern StreamLogger* EspHubLog;
 
 BlockSequencer::BlockSequencer() : current_step(0) {
 }
@@ -48,7 +50,7 @@ void BlockSequencer::evaluate(PlcMemory& memory) {
         }
         if (millis() - current_s.start_time >= current_s.timeout_ms) {
             timeout_occurred = true;
-            Log->printf("Sequencer timeout in step %d\n", current_step);
+            EspHubLog->printf("Sequencer timeout in step %d\n", current_step);
         }
     }
 
