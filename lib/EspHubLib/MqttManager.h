@@ -3,12 +3,16 @@
 
 #include <Arduino.h>
 #include <PubSubClient.h>
+#include <WiFi.h>
 #include <WiFiClient.h>
-#include <WiFiClientSecure.h> // For MQTTS
+
+// Forward declaration to avoid including WiFiClientSecure.h in header
+class WiFiClientSecure;
 
 class MqttManager {
 public:
     MqttManager();
+    ~MqttManager();
     void begin(const char* server, int port, bool use_tls = false, const char* ca_cert_path = "", const char* client_cert_path = "", const char* client_key_path = "");
     void loop();
     void setCallback(MQTT_CALLBACK_SIGNATURE);
@@ -17,7 +21,7 @@ public:
 
 private:
     WiFiClient wifiClient;
-    WiFiClientSecure wifiClientSecure; // For MQTTS
+    WiFiClientSecure* wifiClientSecure; // For MQTTS (pointer to avoid including header)
     PubSubClient mqttClient;
     bool _use_tls;
     void reconnect();

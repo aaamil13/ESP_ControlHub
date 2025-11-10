@@ -1,6 +1,8 @@
 #include "WebManager.h"
 #include <LittleFS.h>
 #include "StreamLogger.h"
+#include "DeviceRegistry.h"
+#include <map>
 
 // Define LITTLEFS as an alias for LittleFS if not already defined
 #ifndef LITTLEFS
@@ -11,7 +13,8 @@ extern StreamLogger* EspHubLog;
 
 WebManager* WebManager::instance = nullptr;
 
-WebManager::WebManager(PlcEngine* plcEngine, MeshDeviceManager* meshDeviceManager) : server(80), ws("/ws"), _plcEngine(plcEngine), _meshDeviceManager(meshDeviceManager) {
+WebManager::WebManager(PlcEngine* plcEngine, MeshDeviceManager* meshDeviceManager, ZigbeeManager* zigbeeManager)
+    : server(80), ws("/ws"), _plcEngine(plcEngine), _meshDeviceManager(meshDeviceManager), _zigbeeManager(zigbeeManager) {
     instance = this;
 }
 
@@ -84,6 +87,11 @@ void WebManager::begin() {
         }
     });
 
+    // Zigbee device management page
+    server.on("/zigbee", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send(LITTLEFS, "/zigbee.html", "text/html");
+    });
+
     server.serveStatic("/", LITTLEFS, "/");
 
     // TODO: Add AsyncElegantOTA library for OTA updates
@@ -151,7 +159,195 @@ void WebManager::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                 String response_str;
                 serializeJson(response, response_str);
                 client->text(response_str);
+            } else if (strcmp(request_type, "get_zigbee_devices") == 0) {
+                if (instance->_zigbeeManager) {
+                    instance->handleZigbeeRequest("get_zigbee_devices", doc.as<JsonObject>(), client);
+                }
+            } else if (strcmp(request_type, "refresh_zigbee_devices") == 0) {
+                if (instance->_zigbeeManager) {
+                    instance->handleZigbeeRequest("refresh_zigbee_devices", doc.as<JsonObject>(), client);
+                }
+            } else if (strcmp(request_type, "zigbee_start_pairing") == 0) {
+                if (instance->_zigbeeManager) {
+                    instance->handleZigbeeRequest("zigbee_start_pairing", doc.as<JsonObject>(), client);
+                }
+            } else if (strcmp(request_type, "zigbee_stop_pairing") == 0) {
+                if (instance->_zigbeeManager) {
+                    instance->handleZigbeeRequest("zigbee_stop_pairing", doc.as<JsonObject>(), client);
+                }
+            } else if (strcmp(request_type, "zigbee_control") == 0) {
+                if (instance->_zigbeeManager) {
+                    instance->handleZigbeeRequest("zigbee_control", doc.as<JsonObject>(), client);
+                }
             }
         }
+    }
+}
+
+void WebManager::handleZigbeeRequest(const String& requestType, const JsonObject& data, AsyncWebSocketClient* client) {
+    if (requestType == "get_zigbee_devices") {
+        // Get all Zigbee devices from DeviceRegistry
+        DeviceRegistry& registry = DeviceRegistry::getInstance();
+        auto zigbeeEndpoints = registry.getEndpointsByProtocol(ProtocolType::ZIGBEE);
+
+        JsonDocument response;
+        response["type"] = "zigbee_devices";
+        response["bridge_online"] = _zigbeeManager->isBridgeOnline();
+        response["pairing_enabled"] = _zigbeeManager->isPairingEnabled();
+
+        JsonArray devicesArray = response.createNestedArray("devices");
+
+        // Group endpoints by device
+        std::map<String, JsonObject> deviceMap;
+
+        for (auto* endpoint : zigbeeEndpoints) {
+            String deviceId = endpoint->deviceId;
+
+            // Create device object if not exists
+            if (deviceMap.find(deviceId) == deviceMap.end()) {
+                JsonObject deviceObj = devicesArray.createNestedObject();
+                deviceObj["id"] = deviceId;
+                deviceObj["name"] = deviceId.substring(deviceId.lastIndexOf('.') + 1);
+                deviceObj["online"] = endpoint->isOnline;
+                deviceObj["location"] = endpoint->location;
+                JsonArray endpointsArray = deviceObj.createNestedArray("endpoints");
+                deviceMap[deviceId] = deviceObj;
+            }
+
+            // Add endpoint to device
+            JsonObject deviceObj = deviceMap[deviceId];
+            JsonArray endpointsArray = deviceObj["endpoints"];
+            JsonObject endpointObj = endpointsArray.createNestedObject();
+            endpointObj["name"] = endpoint->endpoint;
+            endpointObj["datatype"] = (endpoint->datatype == PlcValueType::BOOL ? "bool" :
+                                       endpoint->datatype == PlcValueType::INT ? "int" :
+                                       endpoint->datatype == PlcValueType::REAL ? "real" : "string");
+            endpointObj["writable"] = endpoint->isWritable;
+
+            // Add current value
+            switch (endpoint->datatype) {
+                case PlcValueType::BOOL:
+                    endpointObj["value"] = endpoint->currentValue.value.bVal;
+                    break;
+                case PlcValueType::INT:
+                    endpointObj["value"] = endpoint->currentValue.value.i16Val;
+                    break;
+                case PlcValueType::REAL:
+                    endpointObj["value"] = endpoint->currentValue.value.fVal;
+                    break;
+                case PlcValueType::STRING_TYPE:
+                    endpointObj["value"] = String(endpoint->currentValue.value.sVal);
+                    break;
+                default:
+                    endpointObj["value"] = nullptr;
+            }
+        }
+
+        String responseStr;
+        serializeJson(response, responseStr);
+        client->text(responseStr);
+
+    } else if (requestType == "refresh_zigbee_devices") {
+        _zigbeeManager->refreshDeviceList();
+
+        JsonDocument response;
+        response["type"] = "zigbee_refresh";
+        response["status"] = "requested";
+
+        String responseStr;
+        serializeJson(response, responseStr);
+        client->text(responseStr);
+
+    } else if (requestType == "zigbee_start_pairing") {
+        uint32_t duration = data["duration"] | 60;
+        _zigbeeManager->enablePairing(duration);
+
+        JsonDocument response;
+        response["type"] = "zigbee_pairing";
+        response["enabled"] = true;
+        response["duration"] = duration;
+
+        String responseStr;
+        serializeJson(response, responseStr);
+        client->text(responseStr);
+
+    } else if (requestType == "zigbee_stop_pairing") {
+        _zigbeeManager->disablePairing();
+
+        JsonDocument response;
+        response["type"] = "zigbee_pairing";
+        response["enabled"] = false;
+
+        String responseStr;
+        serializeJson(response, responseStr);
+        client->text(responseStr);
+
+    } else if (requestType == "zigbee_control") {
+        const char* deviceId = data["device"];
+        const char* endpoint = data["endpoint"];
+        JsonVariant value = data["value"];
+
+        if (deviceId && endpoint) {
+            // Build full endpoint name
+            DeviceRegistry& registry = DeviceRegistry::getInstance();
+            auto zigbeeEndpoints = registry.getEndpointsByDevice(deviceId);
+
+            for (auto* ep : zigbeeEndpoints) {
+                if (ep->endpoint == String(endpoint) && ep->isWritable) {
+                    // Update value in registry
+                    PlcValue newValue(ep->datatype);
+
+                    switch (ep->datatype) {
+                        case PlcValueType::BOOL:
+                            if (value.is<bool>()) {
+                                newValue.value.bVal = value.as<bool>();
+                            } else if (value.is<const char*>()) {
+                                const char* val = value.as<const char*>();
+                                newValue.value.bVal = (strcmp(val, "ON") == 0 || strcmp(val, "true") == 0);
+                            }
+                            break;
+                        case PlcValueType::INT:
+                            newValue.value.i16Val = value.as<int16_t>();
+                            break;
+                        case PlcValueType::REAL:
+                            newValue.value.fVal = value.as<float>();
+                            break;
+                        case PlcValueType::STRING_TYPE:
+                            strncpy(newValue.value.sVal, value.as<const char*>(), 63);
+                            newValue.value.sVal[63] = '\0';
+                            break;
+                        default:
+                            break;
+                    }
+
+                    registry.updateEndpointValue(ep->fullName, newValue);
+
+                    // Publish to MQTT (will be handled by MQTT manager)
+                    // The ZigbeeManager should have a method to publish control commands
+                    // For now, just update the registry
+
+                    JsonDocument response;
+                    response["type"] = "zigbee_control_result";
+                    response["success"] = true;
+                    response["device"] = deviceId;
+                    response["endpoint"] = endpoint;
+
+                    String responseStr;
+                    serializeJson(response, responseStr);
+                    client->text(responseStr);
+                    return;
+                }
+            }
+        }
+
+        // Send error response
+        JsonDocument response;
+        response["type"] = "zigbee_control_result";
+        response["success"] = false;
+        response["error"] = "Device or endpoint not found or not writable";
+
+        String responseStr;
+        serializeJson(response, responseStr);
+        client->text(responseStr);
     }
 }

@@ -1,5 +1,6 @@
 #include "MqttManager.h"
 #include <LittleFS.h>
+#include <WiFiClientSecure.h>
 #include "StreamLogger.h"
 
 // Define LITTLEFS as an alias for LittleFS if not already defined
@@ -9,7 +10,14 @@
 
 extern StreamLogger* EspHubLog;
 
-MqttManager::MqttManager() : mqttClient(wifiClient) {
+MqttManager::MqttManager() : mqttClient(wifiClient), wifiClientSecure(nullptr), _use_tls(false) {
+}
+
+MqttManager::~MqttManager() {
+    if (wifiClientSecure) {
+        delete wifiClientSecure;
+        wifiClientSecure = nullptr;
+    }
 }
 
 void MqttManager::begin(const char* server, int port, bool use_tls, const char* ca_cert_path, const char* client_cert_path, const char* client_key_path) {
@@ -20,11 +28,16 @@ void MqttManager::begin(const char* server, int port, bool use_tls, const char* 
     }
 
     if (_use_tls) {
+        // Create WiFiClientSecure if needed
+        if (!wifiClientSecure) {
+            wifiClientSecure = new WiFiClientSecure();
+        }
+
         // Load certificates from LittleFS
         if (strlen(ca_cert_path) > 0) {
             File ca = LITTLEFS.open(ca_cert_path, "r");
             if (ca) {
-                wifiClientSecure.setCACert(ca.readString().c_str());
+                wifiClientSecure->setCACert(ca.readString().c_str());
                 ca.close();
                 EspHubLog->printf("Loaded CA cert from %s\n", ca_cert_path);
             } else {
@@ -35,8 +48,8 @@ void MqttManager::begin(const char* server, int port, bool use_tls, const char* 
             File client_cert = LITTLEFS.open(client_cert_path, "r");
             File client_key = LITTLEFS.open(client_key_path, "r");
             if (client_cert && client_key) {
-                wifiClientSecure.setCertificate(client_cert.readString().c_str());
-                wifiClientSecure.setPrivateKey(client_key.readString().c_str());
+                wifiClientSecure->setCertificate(client_cert.readString().c_str());
+                wifiClientSecure->setPrivateKey(client_key.readString().c_str());
                 client_cert.close();
                 client_key.close();
                 EspHubLog->printf("Loaded client cert and key from %s and %s\n", client_cert_path, client_key_path);
@@ -44,7 +57,7 @@ void MqttManager::begin(const char* server, int port, bool use_tls, const char* 
                 EspHubLog->printf("ERROR: Failed to open client cert/key files %s, %s\n", client_cert_path, client_key_path);
             }
         }
-        mqttClient.setClient(wifiClientSecure);
+        mqttClient.setClient(*wifiClientSecure);
     } else {
         mqttClient.setClient(wifiClient);
     }
