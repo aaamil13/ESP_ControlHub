@@ -8,8 +8,8 @@
 #include <esp_task_wdt.h>
 #include <vector>
 #include <memory>
-#include "../EspHubLib/TimeManager.h" // For scheduler blocks
-#include "../EspHubLib/MeshDeviceManager.h" // For sending commands to mesh devices
+#include <TimeManager.h> // For scheduler blocks
+#include <MeshDeviceManager.h> // For sending commands to mesh devices
 #include "PlcProgram.h" // New PlcProgram class
 
 enum class PlcEngineState { // Renamed to avoid conflict

@@ -1,5 +1,5 @@
 #include "PlcProgram.h"
-#include "../../EspHubLib/StreamLogger.h" // For EspHubLog
+#include <StreamLogger.h> // For EspHubLog
 extern StreamLogger* EspHubLog; // Declare EspHubLog
 
 // Include all block headers
@@ -60,7 +60,7 @@ bool PlcProgram::loadConfiguration(const char* jsonConfig) {
 
     DeserializationError error = deserializeJson(config, jsonConfig);
     if (error) {
-        EspHubLog->printf(F("deserializeJson() for PLC program '%s' config failed: %s\n"), _name.c_str(), error.c_str());
+        EspHubLog->printf("deserializeJson() for PLC program '%s' config failed: %s\n", _name.c_str(), error.c_str());
         return false;
     }
 

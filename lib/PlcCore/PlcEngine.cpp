@@ -1,4 +1,8 @@
 #include "PlcEngine.h"
+#include <StreamLogger.h>
+
+extern StreamLogger* EspHubLog;
+
 #include "blocks/logic/BlockAND.h"
 #include "blocks/logic/BlockOR.h"
 #include "blocks/logic/BlockNOT.h"
@@ -52,17 +56,17 @@ void PlcEngine::begin() {
 
 bool PlcEngine::loadProgram(const String& programName, const char* jsonConfig) {
     if (programs.count(programName)) {
-        Log->printf("ERROR: Program '%s' already exists. Delete it first.\n", programName.c_str());
+        EspHubLog->printf("ERROR: Program '%s' already exists. Delete it first.\n", programName.c_str());
         return false;
     }
 
     auto newProgram = std::make_unique<PlcProgram>(programName, _timeManager, _meshDeviceManager);
     if (!newProgram->loadConfiguration(jsonConfig)) {
-        Log->printf("ERROR: Failed to load configuration for program '%s'.\n", programName.c_str());
+        EspHubLog->printf("ERROR: Failed to load configuration for program '%s'.\n", programName.c_str());
         return false;
     }
     programs[programName] = std::move(newProgram);
-    Log->printf("Program '%s' loaded successfully.\n", programName.c_str());
+    EspHubLog->printf("Program '%s' loaded successfully.\n", programName.c_str());
     return true;
 }
 
@@ -72,7 +76,7 @@ void PlcEngine::runProgram(const String& programName) {
         // Start the global PLC engine task if not already running
         if (currentEngineState == PlcEngineState::STOPPED) {
             currentEngineState = PlcEngineState::RUNNING;
-            Log->println("Starting global PLC engine task on Core 0...");
+            EspHubLog->println("Starting global PLC engine task on Core 0...");
             xTaskCreatePinnedToCore(
                 plcEngineTask,          // Task function
                 "plcEngineTask",        // Name of the task
@@ -83,7 +87,7 @@ void PlcEngine::runProgram(const String& programName) {
                 0);                     // Pin to core 0
         }
     } else {
-        Log->printf("ERROR: Program '%s' not found.\n", programName.c_str());
+        EspHubLog->printf("ERROR: Program '%s' not found.\n", programName.c_str());
     }
 }
 
@@ -91,7 +95,7 @@ void PlcEngine::pauseProgram(const String& programName) {
     if (programs.count(programName)) {
         programs[programName]->pause();
     } else {
-        Log->printf("ERROR: Program '%s' not found.\n", programName.c_str());
+        EspHubLog->printf("ERROR: Program '%s' not found.\n", programName.c_str());
     }
 }
 
@@ -112,24 +116,24 @@ void PlcEngine::stopProgram(const String& programName) {
                 plcEngineTaskHandle = NULL;
             }
             currentEngineState = PlcEngineState::STOPPED;
-            Log->println("Global PLC engine task stopped.");
+            EspHubLog->println("Global PLC engine task stopped.");
         }
     } else {
-        Log->printf("ERROR: Program '%s' not found.\n", programName.c_str());
+        EspHubLog->printf("ERROR: Program '%s' not found.\n", programName.c_str());
     }
 }
 
 void PlcEngine::deleteProgram(const String& programName) {
     if (programs.count(programName)) {
         if (programs[programName]->getState() != PlcProgramState::STOPPED) {
-            Log->printf("ERROR: Cannot delete program '%s' while it is running or paused. Stop it first.\n", programName.c_str());
+            EspHubLog->printf("ERROR: Cannot delete program '%s' while it is running or paused. Stop it first.\n", programName.c_str());
             return;
         }
         programs.erase(programName);
-        Log->printf("Program '%s' deleted.\n", programName.c_str());
+        EspHubLog->printf("Program '%s' deleted.\n", programName.c_str());
         // Also delete the file from LittleFS
     } else {
-        Log->printf("ERROR: Program '%s' not found.\n", programName.c_str());
+        EspHubLog->printf("ERROR: Program '%s' not found.\n", programName.c_str());
     }
 }
 
@@ -156,7 +160,7 @@ void PlcEngine::evaluateAllPrograms() {
 
 void PlcEngine::plcEngineTask(void* parameter) {
     PlcEngine* self = static_cast<PlcEngine*>(parameter);
-    Log->println("Global PLC engine task started.");
+    EspHubLog->println("Global PLC engine task started.");
 
     // Initialize and subscribe to the watchdog
     // Watchdog timeout is now per program, but a global one can be useful

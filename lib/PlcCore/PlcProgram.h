@@ -7,8 +7,8 @@
 #include <memory>
 #include "PlcMemory.h"
 #include "blocks/PlcBlock.h"
-#include "../EspHubLib/TimeManager.h" // For scheduler blocks
-#include "../EspHubLib/MeshDeviceManager.h" // For sending commands to mesh devices
+#include <TimeManager.h> // For scheduler blocks
+#include <MeshDeviceManager.h> // For sending commands to mesh devices
 
 enum class PlcProgramState {
     STOPPED,

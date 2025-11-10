@@ -1,6 +1,6 @@
 #include "PlcMemory.h"
 #include "Preferences.h"
-#include "../../EspHubLib/StreamLogger.h" // Include for EspHubLog
+#include <StreamLogger.h> // Include for EspHubLog
 
 extern StreamLogger* EspHubLog; // Declare EspHubLog
 
@@ -27,7 +27,7 @@ bool PlcMemory::declareVariable(const std::string& name, PlcValueType type, bool
         case PlcValueType::INT: newVar.value.i16Val = (int16_t)0; break;
         case PlcValueType::DINT: newVar.value.ui32Val = (uint32_t)0; break;
         case PlcValueType::REAL: newVar.value.fVal = 0.0f; break;
-        case PlcValueType::STRING_TYPE_TYPE: strcpy(newVar.value.sVal, ""); break;
+        case PlcValueType::STRING_TYPE: strcpy(newVar.value.sVal, ""); break;
     }
     memoryMap[name] = newVar;
     return true;
@@ -47,7 +47,7 @@ bool PlcMemory::setValue(const std::string& name, T val) {
         case PlcValueType::INT: var.value.i16Val = (int16_t)val; break;
         case PlcValueType::DINT: var.value.ui32Val = (uint32_t)val; break;
         case PlcValueType::REAL: var.value.fVal = (float)val; break;
-        case PlcValueType::STRING_TYPE_TYPE: strncpy(var.value.sVal, String(val).c_str(), sizeof(var.value.sVal) - 1); var.value.sVal[sizeof(var.value.sVal) - 1] = '\0'; break;
+        case PlcValueType::STRING_TYPE: strncpy(var.value.sVal, String(val).c_str(), sizeof(var.value.sVal) - 1); var.value.sVal[sizeof(var.value.sVal) - 1] = '\0'; break;
     }
     return true;
 }
@@ -64,7 +64,7 @@ T PlcMemory::getValue(const std::string& name, T defaultValue) {
         case PlcValueType::INT: return (T)var.value.i16Val;
         case PlcValueType::DINT: return (T)var.value.ui32Val;
         case PlcValueType::REAL: return (T)var.value.fVal;
-        case PlcValueType::STRING_TYPE_TYPE: return (T)String(var.value.sVal);
+        case PlcValueType::STRING_TYPE: return (T)String(var.value.sVal);
     }
     return defaultValue; // Should not reach here
 }
@@ -93,7 +93,7 @@ void PlcMemory::loadRetentiveMemory() {
                 case PlcValueType::REAL:
                     var.value.fVal = preferences.getFloat(key.c_str(), var.value.fVal);
                     break;
-                case PlcValueType::STRING_TYPE_TYPE: {
+                case PlcValueType::STRING_TYPE: {
                     String stored_string = preferences.getString(key.c_str(), "");
                     if (!stored_string.isEmpty()) {
                         strncpy(var.value.sVal, stored_string.c_str(), sizeof(var.value.sVal) - 1);
@@ -132,7 +132,7 @@ void PlcMemory::saveRetentiveMemory() {
                 case PlcValueType::REAL:
                     preferences.putFloat(key.c_str(), var.value.fVal);
                     break;
-                case PlcValueType::STRING_TYPE_TYPE:
+                case PlcValueType::STRING_TYPE:
                     preferences.putString(key.c_str(), var.value.sVal);
                     break;
             }

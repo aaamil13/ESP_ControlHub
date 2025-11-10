@@ -3,7 +3,7 @@
 BlockTON::BlockTON() : preset_time(0), start_time(0), timing(false) {
 }
 
-void BlockTON::configure(const JsonObject& config, PlcMemory& memory) {
+bool BlockTON::configure(const JsonObject& config, PlcMemory& memory) {
     if (config.containsKey("inputs")) {
         input_var = config["inputs"]["in"].as<std::string>();
         preset_time = config["inputs"]["pt"];
@@ -14,6 +14,17 @@ void BlockTON::configure(const JsonObject& config, PlcMemory& memory) {
             output_var_et = config["outputs"]["et"].as<std::string>();
         }
     }
+    return true;
+}
+
+JsonDocument BlockTON::getBlockSchema() {
+    JsonDocument schema;
+    schema["description"] = "Timer ON Delay block";
+    schema["inputs"]["in"]["type"] = "bool";
+    schema["inputs"]["pt"]["type"] = "uint32";
+    schema["outputs"]["q"]["type"] = "bool";
+    schema["outputs"]["et"]["type"] = "uint32";
+    return schema;
 }
 
 void BlockTON::evaluate(PlcMemory& memory) {

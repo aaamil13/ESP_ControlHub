@@ -1,5 +1,5 @@
 #include "BlockSequencer.h"
-#include "../../../EspHubLib/StreamLogger.h" // For Log
+#include <StreamLogger.h> // For Log
 
 BlockSequencer::BlockSequencer() : current_step(0) {
 }

@@ -1,0 +1,24 @@
+{
+  "name": "EspHubLib",
+  "version": "1.0.0",
+  "description": "ESP32 Home Automation Hub Library",
+  "keywords": "esp32, iot, home-automation, mqtt, mesh",
+  "authors": {
+    "name": "EspHub Project"
+  },
+  "dependencies": {
+    "knolleary/PubSubClient": "*",
+    "bblanchon/ArduinoJson": "*",
+    "esphome/ESPAsyncWebServer-esphome": "*",
+    "esphome/AsyncTCP-esphome": "*",
+    "painlessMesh/painlessMesh": "*"
+  },
+  "export": {
+    "include": [
+      "*.h",
+      "*.cpp"
+    ]
+  },
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}

@@ -7,8 +7,9 @@
 class BlockTON : public PlcBlock {
 public:
     BlockTON();
-    void configure(const JsonObject& config, PlcMemory& memory) override;
+    bool configure(const JsonObject& config, PlcMemory& memory) override;
     void evaluate(PlcMemory& memory) override;
+    JsonDocument getBlockSchema() override;
 
 private:
     std::string input_var;

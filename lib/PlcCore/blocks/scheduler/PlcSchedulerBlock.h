@@ -2,7 +2,7 @@
 #define PLC_SCHEDULER_BLOCK_H
 
 #include "../PlcBlock.h"
-#include "../../EspHubLib/TimeManager.h" // Assuming TimeManager is accessible
+#include <TimeManager.h> // Assuming TimeManager is accessible
 
 class PlcSchedulerBlock : public PlcBlock {
 public:
