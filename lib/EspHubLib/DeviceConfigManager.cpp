@@ -109,7 +109,7 @@ bool DeviceConfigManager::loadDeviceFromFile(const String& filepath) {
         return false;
     }
 
-    return loadDevice(doc.as<JsonObject>());
+    return loadDevice(doc.to<JsonObject>());
 }
 
 bool DeviceConfigManager::loadAllDevices() {
@@ -240,7 +240,7 @@ bool DeviceConfigManager::updateDevice(const String& deviceId, const JsonObject&
     if (!loadDevice(config)) {
         // Try to restore old device
         JsonDocument& oldConfig = deviceConfigs[deviceId];
-        initializeDeviceConnection(deviceId, oldConfig.as<JsonObject>());
+        initializeDeviceConnection(deviceId, oldConfig.to<JsonObject>());
         return false;
     }
 
@@ -298,7 +298,7 @@ JsonDocument DeviceConfigManager::getDeviceConfig(const String& deviceId) {
 
     // Create a copy
     JsonObject root = doc.to<JsonObject>();
-    JsonObject source = deviceConfigs[deviceId].as<JsonObject>();
+    JsonObject source = deviceConfigs[deviceId].to<JsonObject>();
 
     for (JsonPair kv : source) {
         root[kv.key()] = kv.value();
@@ -312,7 +312,7 @@ String DeviceConfigManager::getDeviceProtocol(const String& deviceId) {
         return "";
     }
 
-    JsonObject config = deviceConfigs[deviceId].as<JsonObject>();
+    JsonObject config = deviceConfigs[deviceId].to<JsonObject>();
     return config["protocol"] | "";
 }
 
@@ -321,7 +321,7 @@ String DeviceConfigManager::getDeviceLocation(const String& deviceId) {
         return "";
     }
 
-    JsonObject config = deviceConfigs[deviceId].as<JsonObject>();
+    JsonObject config = deviceConfigs[deviceId].to<JsonObject>();
     return config["location"] | "";
 }
 
@@ -330,7 +330,7 @@ String DeviceConfigManager::getDeviceFriendlyName(const String& deviceId) {
         return "";
     }
 
-    JsonObject config = deviceConfigs[deviceId].as<JsonObject>();
+    JsonObject config = deviceConfigs[deviceId].to<JsonObject>();
     return config["friendly_name"] | deviceId;
 }
 
@@ -356,7 +356,7 @@ std::vector<String> DeviceConfigManager::getDevicesByProtocol(const String& prot
     lowerProtocol.toLowerCase();
 
     for (const auto& pair : deviceConfigs) {
-        JsonObject config = pair.second.as<JsonObject>();
+        JsonObjectConst config = pair.second.as<JsonObjectConst>();
         String deviceProtocol = config["protocol"] | "";
         deviceProtocol.toLowerCase();
 
@@ -375,7 +375,7 @@ std::vector<String> DeviceConfigManager::getDevicesByLocation(const String& loca
     lowerLocation.toLowerCase();
 
     for (const auto& pair : deviceConfigs) {
-        JsonObject config = pair.second.as<JsonObject>();
+        JsonObjectConst config = pair.second.as<JsonObjectConst>();
         String deviceLocation = config["location"] | "";
         deviceLocation.toLowerCase();
 
@@ -394,12 +394,12 @@ std::vector<String> DeviceConfigManager::getDevicesByTag(const String& tag) cons
     lowerTag.toLowerCase();
 
     for (const auto& pair : deviceConfigs) {
-        JsonObject config = pair.second.as<JsonObject>();
-        JsonObject metadata = config["metadata"];
-        JsonArray tags = metadata["tags"];
+        JsonObjectConst config = pair.second.as<JsonObjectConst>();
+        JsonObjectConst metadata = config["metadata"];
+        JsonArrayConst tags = metadata["tags"];
 
         if (tags) {
-            for (JsonVariant v : tags) {
+            for (JsonVariantConst v : tags) {
                 String deviceTag = v.as<String>();
                 deviceTag.toLowerCase();
 
@@ -425,11 +425,11 @@ std::vector<String> DeviceConfigManager::getDeviceEndpoints(const String& device
         return result;
     }
 
-    JsonObject config = deviceConfigs.at(deviceId).as<JsonObject>();
-    JsonArray endpoints = config["endpoints"];
+    JsonObjectConst config = deviceConfigs.at(deviceId).as<JsonObjectConst>();
+    JsonArrayConst endpoints = config["endpoints"];
 
     if (endpoints) {
-        for (JsonObject ep : endpoints) {
+        for (JsonObjectConst ep : endpoints) {
             String name = ep["name"] | "";
             if (name.length() > 0) {
                 result.push_back(name);
@@ -554,7 +554,7 @@ bool DeviceConfigManager::testDeviceConnection(const String& deviceId) {
         return false;
     }
 
-    JsonObject config = deviceConfigs[deviceId].as<JsonObject>();
+    JsonObject config = deviceConfigs[deviceId].to<JsonObject>();
     JsonObject connectionConfig = config["connection"];
 
     return manager->testConnection(connectionConfig);
@@ -623,7 +623,7 @@ void DeviceConfigManager::updateDeviceStatus(const String& deviceId, bool online
     }
 
     // Update status in config
-    JsonObject config = deviceConfigs[deviceId].as<JsonObject>();
+    JsonObject config = deviceConfigs[deviceId].to<JsonObject>();
     if (!config["status"]) {
         config.createNestedObject("status");
     }
@@ -704,7 +704,7 @@ DeviceConfigManager::DeviceStats DeviceConfigManager::getStatistics() {
 
     for (const auto& pair : deviceConfigs) {
         String deviceId = pair.first;
-        JsonObject config = pair.second.as<JsonObject>();
+        JsonObjectConst config = pair.second.as<JsonObjectConst>();
 
         // Count online/offline
         if (isDeviceOnline(deviceId)) {
@@ -800,11 +800,11 @@ bool DeviceConfigManager::initializeDeviceConnection(const String& deviceId, con
     return true;
 }
 
-JsonObject DeviceConfigManager::findEndpointInConfig(const JsonDocument& deviceConfig, const String& endpointName) {
+JsonObject DeviceConfigManager::findEndpointInConfig(JsonDocument& deviceConfig, const String& endpointName) {
     JsonDocument emptyDoc;
     JsonObject empty = emptyDoc.to<JsonObject>();
 
-    JsonObject config = deviceConfig.as<JsonObject>();
+    JsonObject config = deviceConfig.to<JsonObject>();
     JsonArray endpoints = config["endpoints"];
 
     if (!endpoints) {

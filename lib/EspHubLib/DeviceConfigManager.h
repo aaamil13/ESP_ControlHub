@@ -104,7 +104,7 @@ private:
     bool validateDeviceConfig(const JsonObject& config);
     String generateDeviceFilename(const String& deviceId);
     bool initializeDeviceConnection(const String& deviceId, const JsonObject& config);
-    JsonObject findEndpointInConfig(const JsonDocument& deviceConfig, const String& endpointName);
+    JsonObject findEndpointInConfig(JsonDocument& deviceConfig, const String& endpointName);
 
     // File operations
     bool ensureConfigDirectory();

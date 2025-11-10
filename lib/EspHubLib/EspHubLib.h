@@ -13,6 +13,20 @@
 #include "UserManager.h" // New UserManager
 #include "MqttDiscoveryManager.h" // New MqttDiscoveryManager
 #include "OtaManager.h" // New OtaManager
+#include "DeviceConfigManager.h" // Device configuration manager
+
+// Conditional protocol manager includes
+#ifdef USE_WIFI_DEVICES
+#include "WiFiDeviceManager.h"
+#endif
+
+#ifdef USE_RF433
+#include "RF433Manager.h"
+#endif
+
+#ifdef USE_ZIGBEE
+#include "ZigbeeManager.h"
+#endif
 
 extern StreamLogger* EspHubLog;
 
@@ -44,6 +58,21 @@ private:
     UserManager userManager; // New UserManager instance
     MqttDiscoveryManager mqttDiscoveryManager; // New MqttDiscoveryManager instance
     OtaManager otaManager; // New OtaManager instance
+    DeviceConfigManager deviceConfigManager; // Device configuration manager
+
+    // Conditional protocol managers
+    #ifdef USE_WIFI_DEVICES
+    WiFiDeviceManager* wifiDeviceManager;
+    #endif
+
+    #ifdef USE_RF433
+    RF433Manager* rf433Manager;
+    #endif
+
+    #ifdef USE_ZIGBEE
+    ZigbeeManager* zigbeeManager;
+    #endif
+
     StreamLogger logger;
     static EspHub* instance;
 

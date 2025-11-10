@@ -1,13 +1,26 @@
 #ifndef ZIGBEE_MANAGER_H
 #define ZIGBEE_MANAGER_H
 
-#include "DeviceManager.h"
+#include "ProtocolManagerInterface.h"
 #include "MqttManager.h"
 #include <ArduinoJson.h>
 #include <functional>
+#include <map>
 
 /**
- * ZigbeeManager - Manages Zigbee devices via Zigbee2MQTT bridge
+ * ZigbeeManager - Protocol manager for Zigbee devices via Zigbee2MQTT bridge
+ *
+ * Implements the ProtocolManagerInterface to provide transport layer
+ * for Zigbee devices via Zigbee2MQTT bridge.
+ *
+ * Responsibilities:
+ * - Communication with Zigbee2MQTT bridge via MQTT
+ * - Device discovery and pairing control
+ * - Reading/writing device endpoints
+ *
+ * Does NOT:
+ * - Store device configurations (done by DeviceConfigManager)
+ * - Register IO points in DeviceRegistry (done by DeviceConfigManager)
  *
  * This manager integrates with Zigbee2MQTT (https://www.zigbee2mqtt.io/)
  * which acts as a bridge between Zigbee devices and MQTT.
@@ -18,24 +31,43 @@
  * - zigbee2mqtt/[device_friendly_name] - Device state updates
  * - zigbee2mqtt/[device_friendly_name]/set - Send commands to device
  * - zigbee2mqtt/bridge/request/permit_join - Enable/disable pairing
- *
- * Hierarchical naming:
- *   {location}.zigbee.{device_name}.{endpoint}.{datatype}
- *   Example: kitchen.zigbee.temp_sensor.temperature.real
  */
-class ZigbeeManager : public DeviceManager {
+
+struct ZigbeeDevice {
+    String deviceId;
+    String ieeeAddress;
+    String friendlyName;
+    String model;
+    String manufacturer;
+    bool isOnline;
+    unsigned long lastSeen;
+    JsonDocument deviceDefinition;  // Cached device definition from Zigbee2MQTT
+};
+
+class ZigbeeManager : public ProtocolManagerInterface {
 public:
-    ZigbeeManager(MqttManager* mqtt, const String& defaultLocation = "");
+    ZigbeeManager(MqttManager* mqtt, const String& bridgeTopic = "zigbee2mqtt");
     ~ZigbeeManager();
 
-    // DeviceManager interface
+    // ProtocolManagerInterface implementation
     void begin() override;
     void loop() override;
 
-    // Configuration
+    bool initializeDevice(const String& deviceId, const JsonObject& connectionConfig) override;
+    bool removeDevice(const String& deviceId) override;
+
+    bool readEndpoint(const String& deviceId, const JsonObject& endpointConfig, PlcValue& value) override;
+    bool writeEndpoint(const String& deviceId, const JsonObject& endpointConfig, const PlcValue& value) override;
+
+    bool testConnection(const JsonObject& connectionConfig) override;
+    bool testEndpoint(const String& deviceId, const JsonObject& endpointConfig) override;
+
+    String getProtocolName() const override { return "zigbee"; }
+    bool isDeviceOnline(const String& deviceId) override;
+
+    // Zigbee-specific configuration
     void setBridgeTopic(const String& topic);
-    void setDefaultLocation(const String& location);
-    String getDefaultLocation() const { return defaultLocation; }
+    String getBridgeTopic() const { return bridgeTopic; }
 
     // Pairing control
     void enablePairing(uint32_t duration_sec = 60);
@@ -46,49 +78,45 @@ public:
     void requestDeviceList();
     void refreshDeviceList();
 
-    // Manual device registration (for pre-configured devices)
-    bool registerZigbeeDevice(const String& ieeeAddr,
-                             const String& friendlyName,
-                             const String& location,
-                             const JsonObject& deviceDefinition);
-
     // MQTT callback handler
     void handleMqttMessage(const String& topic, const JsonObject& payload);
 
     // Get bridge status
     bool isBridgeOnline() const { return bridgeOnline; }
-    String getBridgeTopic() const { return bridgeTopic; }
 
 private:
     MqttManager* mqtt;
     String bridgeTopic;          // Default: "zigbee2mqtt"
-    String defaultLocation;      // Default location for auto-discovered devices
     bool pairingEnabled;
     bool bridgeOnline;
     unsigned long pairingEndTime;
     unsigned long lastDeviceListRequest;
+
+    // Device storage
+    std::map<String, ZigbeeDevice> devices;  // deviceId -> device
+
+    // Internal device management
+    ZigbeeDevice* getDevice(const String& deviceId);
 
     // MQTT topic handlers
     void handleBridgeDevices(const JsonArray& devices);
     void handleBridgeState(const JsonObject& state);
     void handleDeviceUpdate(const String& deviceName, const JsonObject& state);
 
-    // Device endpoint registration
-    void registerDeviceEndpoints(const String& ieeeAddr,
-                                 const String& friendlyName,
-                                 const String& location,
-                                 const JsonObject& definition);
-
-    // Create endpoint from Zigbee expose definition
-    void createEndpointFromExpose(const String& deviceId,
-                                  const String& location,
-                                  const JsonObject& expose);
+    // Device registration from discovery
+    bool registerDiscoveredDevice(const String& ieeeAddr,
+                                   const String& friendlyName,
+                                   const JsonObjectConst& deviceDefinition);
 
     // Parse Zigbee type to PlcValueType
     PlcValueType zigbeeTypeToPlcType(const String& zigbeeType);
 
     // Subscribe to necessary MQTT topics
     void subscribeToTopics();
+
+    // Build MQTT topic for device
+    String getDeviceTopic(const String& friendlyName) const;
+    String getDeviceSetTopic(const String& friendlyName) const;
 };
 
 #endif // ZIGBEE_MANAGER_H

@@ -564,7 +564,7 @@ PlcValueType WiFiDeviceManager::parseDatatype(const String& type) {
     if (lower == "bool" || lower == "boolean") return PlcValueType::BOOL;
     if (lower == "int" || lower == "integer") return PlcValueType::INT;
     if (lower == "real" || lower == "float" || lower == "double") return PlcValueType::REAL;
-    if (lower == "string" || lower == "text") return PlcValueType::STRING;
+    if (lower == "string" || lower == "text") return PlcValueType::STRING_TYPE;
 
     return PlcValueType::BOOL; // default
 }

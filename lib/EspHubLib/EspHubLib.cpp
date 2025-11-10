@@ -11,6 +11,19 @@ Scheduler meshScheduler;
 EspHub::EspHub() : plcEngine(&timeManager, &meshDeviceManager), webManager(&plcEngine, &meshDeviceManager), mqttDiscoveryManager(&mqttManager, &plcEngine), otaManager(), logger(webManager) {
     instance = this;
     EspHubLog = &logger;
+
+    // Initialize protocol manager pointers
+    #ifdef USE_WIFI_DEVICES
+    wifiDeviceManager = nullptr;
+    #endif
+
+    #ifdef USE_RF433
+    rf433Manager = nullptr;
+    #endif
+
+    #ifdef USE_ZIGBEE
+    zigbeeManager = nullptr;
+    #endif
 }
 
 void EspHub::begin() {
@@ -20,6 +33,37 @@ void EspHub::begin() {
     meshDeviceManager.begin(); // Initialize MeshDeviceManager
     userManager.begin(); // Initialize UserManager
     otaManager.begin(); // Initialize OtaManager
+
+    // Initialize DeviceConfigManager
+    deviceConfigManager.begin();
+
+    // Initialize and register protocol managers
+    #ifdef USE_WIFI_DEVICES
+    wifiDeviceManager = new WiFiDeviceManager();
+    wifiDeviceManager->begin();
+    deviceConfigManager.registerProtocolManager("wifi", wifiDeviceManager);
+    EspHubLog->println("WiFi Device Manager initialized");
+    #endif
+
+    #ifdef USE_RF433
+    // RF433 requires RX and TX pin configuration
+    // Using default pins: RX=GPIO4, TX=GPIO5 (can be made configurable)
+    rf433Manager = new RF433Manager(4, 5);
+    rf433Manager->begin();
+    deviceConfigManager.registerProtocolManager("rf433", rf433Manager);
+    EspHubLog->println("RF433 Manager initialized");
+    #endif
+
+    #ifdef USE_ZIGBEE
+    zigbeeManager = new ZigbeeManager(&mqttManager);
+    zigbeeManager->begin();
+    deviceConfigManager.registerProtocolManager("zigbee", zigbeeManager);
+    EspHubLog->println("Zigbee Manager initialized");
+    #endif
+
+    // Load all device configurations from /config/devices/
+    deviceConfigManager.loadAllDevices();
+    EspHubLog->printf("Loaded %d device configurations\n", deviceConfigManager.getLoadedDeviceCount());
 
     // painlessMesh initialization
     // mesh.setDebugMsgTypes(ERROR | STARTUP); // set before init() so that you can see startup messages
@@ -156,6 +200,20 @@ void EspHub::loop() {
     appManager.updateAll();
     meshDeviceManager.checkOfflineDevices(60000); // Check for offline devices every minute (60 seconds)
     plcEngine.evaluateAllPrograms(); // Evaluate all running PLC programs
+
+    // Call protocol manager loop() methods
+    #ifdef USE_WIFI_DEVICES
+    if (wifiDeviceManager) wifiDeviceManager->loop();
+    #endif
+
+    #ifdef USE_RF433
+    if (rf433Manager) rf433Manager->loop();
+    #endif
+
+    #ifdef USE_ZIGBEE
+    if (zigbeeManager) zigbeeManager->loop();
+    #endif
+
     if (mesh.isRoot()) {
         mqttManager.loop();
         // Publish MQTT Discovery messages periodically
