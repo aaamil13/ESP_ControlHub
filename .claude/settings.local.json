@@ -5,7 +5,9 @@
       "Bash(platformio run)",
       "Bash(dir:*)",
       "Bash(platformio run:*)",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(cat:*)",
+      "Bash(d:\\Dev\\ESP\\EspHub\\platformio_new.ini)"
     ],
     "deny": [],
     "ask": []

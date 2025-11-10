@@ -13,6 +13,7 @@ enum class ProtocolType {
     ZIGBEE,
     BLE,
     WIFI,
+    RF433,
     MODBUS,
     UNKNOWN
 };
