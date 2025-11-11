@@ -9,7 +9,9 @@ enum MeshMessageType {
     MESH_MSG_TYPE_REGISTRATION,
     MESH_MSG_TYPE_SENSOR_DATA,
     MESH_MSG_TYPE_ACTUATOR_COMMAND,
-    MESH_MSG_TYPE_HEARTBEAT
+    MESH_MSG_TYPE_HEARTBEAT,
+    MESH_MSG_TYPE_VARIABLE_SYNC,      // Variable value synchronization
+    MESH_MSG_TYPE_VARIABLE_REQUEST    // Request variable value from remote hub
 };
 
 // Function to parse a mesh message string into a JsonDocument

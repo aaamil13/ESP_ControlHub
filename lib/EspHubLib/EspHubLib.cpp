@@ -80,6 +80,14 @@ void EspHub::begin() {
     mqttExportManager.setPlcEngine(&plcEngine);
     EspHubLog->println("MQTT Export Manager initialized");
 
+    // Initialize MeshExportManager
+    meshExportManager.begin();
+    meshExportManager.setMesh(&mesh);
+    meshExportManager.setVariableRegistry(&variableRegistry);
+    meshExportManager.setPlcEngine(&plcEngine);
+    meshExportManager.setLocalHubId("hub_" + String(ESP.getEfuseMac(), HEX));
+    EspHubLog->println("Mesh Export Manager initialized");
+
     // painlessMesh initialization
     // mesh.setDebugMsgTypes(ERROR | STARTUP); // set before init() so that you can see startup messages
     // mesh.init("EspHubMesh", "password1234", &meshScheduler, 5566);
@@ -226,6 +234,7 @@ void EspHub::loop() {
     appManager.updateAll();
     meshDeviceManager.checkOfflineDevices(60000); // Check for offline devices every minute (60 seconds)
     plcEngine.evaluateAllPrograms(); // Evaluate all running PLC programs
+    meshExportManager.loop(); // Process mesh variable exports (all nodes)
 
     // Call protocol manager loop() methods
     #ifdef USE_WIFI_DEVICES
@@ -294,6 +303,18 @@ void EspHub::receivedCallback(uint32_t from, String &msg) {
             case MESH_MSG_TYPE_HEARTBEAT: {
                 instance->meshDeviceManager.updateDeviceLastSeen(from);
                 EspHubLog->printf("Mesh Heartbeat from %u\n", from);
+                break;
+            }
+            case MESH_MSG_TYPE_VARIABLE_SYNC: {
+                // Handle variable synchronization from remote hub
+                JsonObject payload = doc.as<JsonObject>();
+                instance->meshExportManager.handleVariableSync(from, payload);
+                break;
+            }
+            case MESH_MSG_TYPE_VARIABLE_REQUEST: {
+                // Handle variable request from remote hub
+                JsonObject payload = doc.as<JsonObject>();
+                instance->meshExportManager.handleVariableRequest(from, payload);
                 break;
             }
             default:

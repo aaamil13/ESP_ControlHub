@@ -1,0 +1,273 @@
+{
+  "mesh_export": {
+    "description": "Mesh variable export configuration - share variables between ESP hubs in mesh network",
+
+    "publish": {
+      "description": "Variables to publish from this hub to mesh network",
+
+      "main.temperature": {
+        "sync_interval_ms": 10000,
+        "sync_on_change": true,
+        "min_change_threshold": 0.5,
+        "description": "Room temperature sensor - publish every 10s or on 0.5°C change"
+      },
+
+      "main.humidity": {
+        "sync_interval_ms": 15000,
+        "sync_on_change": true,
+        "min_change_threshold": 2.0,
+        "description": "Room humidity sensor - publish every 15s or on 2% change"
+      },
+
+      "main.pump_status": {
+        "sync_interval_ms": 5000,
+        "sync_on_change": true,
+        "description": "Pump on/off status - publish immediately on change, heartbeat every 5s"
+      },
+
+      "main.valve_position": {
+        "sync_interval_ms": 30000,
+        "sync_on_change": false,
+        "description": "Valve position - periodic sync only (no change detection)"
+      },
+
+      "main.alarm_active": {
+        "sync_interval_ms": 1000,
+        "sync_on_change": true,
+        "description": "Critical alarm - very fast sync (1s) with immediate change notification"
+      }
+    },
+
+    "subscribe": {
+      "description": "Variables to subscribe from other hubs in mesh network",
+
+      "hub_a1b2c3d4.main.outdoor_temp": {
+        "local_alias": "main.remote_outdoor_temp",
+        "timeout_ms": 30000,
+        "description": "Outdoor temperature from weather station hub, 30s timeout"
+      },
+
+      "hub_e5f6g7h8.main.pump_running": {
+        "local_alias": "main.remote_pump",
+        "timeout_ms": 60000,
+        "description": "Remote pump status from pump controller hub, 60s timeout"
+      },
+
+      "hub_i9j0k1l2.main.tank_level": {
+        "local_alias": "main.water_tank_level",
+        "timeout_ms": 45000,
+        "description": "Water tank level from tank monitor hub, 45s timeout"
+      },
+
+      "hub_m3n4o5p6.main.door_open": {
+        "local_alias": "main.remote_door",
+        "timeout_ms": 15000,
+        "description": "Door sensor from security hub, 15s timeout (critical)"
+      }
+    }
+  },
+
+  "usage_examples": {
+    "example_1": {
+      "description": "Basic temperature sharing between two hubs",
+      "hub_1": {
+        "id": "hub_sensor",
+        "publish": {
+          "main.temperature": {
+            "sync_interval_ms": 10000,
+            "sync_on_change": true,
+            "min_change_threshold": 0.5
+          }
+        }
+      },
+      "hub_2": {
+        "id": "hub_controller",
+        "subscribe": {
+          "hub_sensor.main.temperature": {
+            "local_alias": "main.room_temp",
+            "timeout_ms": 30000
+          }
+        }
+      }
+    },
+
+    "example_2": {
+      "description": "Bidirectional status sharing (both hubs publish and subscribe)",
+      "hub_1": {
+        "id": "hub_pump_a",
+        "publish": {
+          "main.pump_a_status": {
+            "sync_interval_ms": 5000,
+            "sync_on_change": true
+          }
+        },
+        "subscribe": {
+          "hub_pump_b.main.pump_b_status": {
+            "local_alias": "main.other_pump",
+            "timeout_ms": 20000
+          }
+        }
+      },
+      "hub_2": {
+        "id": "hub_pump_b",
+        "publish": {
+          "main.pump_b_status": {
+            "sync_interval_ms": 5000,
+            "sync_on_change": true
+          }
+        },
+        "subscribe": {
+          "hub_pump_a.main.pump_a_status": {
+            "local_alias": "main.other_pump",
+            "timeout_ms": 20000
+          }
+        }
+      }
+    },
+
+    "example_3": {
+      "description": "Multi-hub sensor aggregation (one controller, multiple sensors)",
+      "hub_controller": {
+        "id": "hub_main",
+        "subscribe": {
+          "hub_sensor_1.main.temperature": {
+            "local_alias": "main.zone1_temp",
+            "timeout_ms": 30000
+          },
+          "hub_sensor_2.main.temperature": {
+            "local_alias": "main.zone2_temp",
+            "timeout_ms": 30000
+          },
+          "hub_sensor_3.main.temperature": {
+            "local_alias": "main.zone3_temp",
+            "timeout_ms": 30000
+          }
+        }
+      },
+      "hub_sensor_1": {
+        "id": "hub_sensor_1",
+        "publish": {
+          "main.temperature": {
+            "sync_interval_ms": 10000,
+            "sync_on_change": true,
+            "min_change_threshold": 0.5
+          }
+        }
+      }
+    }
+  },
+
+  "configuration_notes": {
+    "hub_id_format": "Hub IDs are automatically generated as 'hub_' + MAC address in hex format",
+    "namespace_format": "Full variable name format: hub_id.program_name.variable_name",
+    "sync_interval": "Minimum time between publishes in milliseconds (heartbeat)",
+    "sync_on_change": "If true, publish immediately when value changes (in addition to interval)",
+    "min_change_threshold": "For numeric values, minimum change to trigger sync_on_change (0 = any change)",
+    "local_alias": "Local PLC variable name where subscribed value will be stored",
+    "timeout_ms": "Mark subscription as stale if no update received within this time",
+    "stale_handling": "Stale subscriptions are flagged but value remains (can check with isSubscriptionStale)"
+  },
+
+  "performance_tuning": {
+    "fast_critical": {
+      "description": "Critical fast-changing variables (alarms, safety)",
+      "sync_interval_ms": 1000,
+      "sync_on_change": true,
+      "timeout_ms": 5000
+    },
+    "normal_sensor": {
+      "description": "Normal sensor data",
+      "sync_interval_ms": 10000,
+      "sync_on_change": true,
+      "timeout_ms": 30000
+    },
+    "slow_status": {
+      "description": "Slow-changing status values",
+      "sync_interval_ms": 60000,
+      "sync_on_change": true,
+      "timeout_ms": 120000
+    },
+    "periodic_only": {
+      "description": "Values that don't need immediate sync",
+      "sync_interval_ms": 30000,
+      "sync_on_change": false,
+      "timeout_ms": 90000
+    }
+  },
+
+  "integration_with_plc": {
+    "description": "How to use mesh-synced variables in PLC programs",
+    "example_ladder_logic": {
+      "description": "Use subscribed remote variables just like local variables",
+      "rungs": [
+        {
+          "description": "Start pump when remote temperature exceeds threshold",
+          "contacts": [
+            "main.remote_outdoor_temp > 25.0",
+            "main.pump_enabled"
+          ],
+          "coils": [
+            "main.pump_running"
+          ]
+        },
+        {
+          "description": "Interlock - don't run if other pump is running",
+          "contacts": [
+            "main.start_button",
+            "!main.other_pump"
+          ],
+          "coils": [
+            "main.pump_a_status"
+          ]
+        }
+      ]
+    }
+  },
+
+  "troubleshooting": {
+    "subscription_stale": {
+      "symptom": "isSubscriptionStale returns true",
+      "causes": [
+        "Remote hub offline or out of mesh range",
+        "Remote hub not publishing the variable",
+        "timeout_ms too short for sync_interval_ms",
+        "Mesh network congestion"
+      ],
+      "solutions": [
+        "Check mesh connectivity with mesh.getNodeList()",
+        "Verify remote hub configuration",
+        "Increase timeout_ms (should be 2-3x sync_interval_ms)",
+        "Reduce mesh traffic or increase bandwidth"
+      ]
+    },
+    "high_mesh_traffic": {
+      "symptom": "Mesh network congested, messages delayed",
+      "causes": [
+        "Too many variables with sync_on_change=true",
+        "sync_interval_ms too short",
+        "Large number of hubs sharing variables"
+      ],
+      "solutions": [
+        "Disable sync_on_change for non-critical variables",
+        "Increase sync_interval_ms",
+        "Use min_change_threshold to reduce unnecessary syncs",
+        "Optimize mesh topology (reduce hops)"
+      ]
+    },
+    "variable_not_updating": {
+      "symptom": "Subscribed variable not receiving updates",
+      "causes": [
+        "Wrong hub_id in subscription",
+        "Remote variable name mismatch",
+        "local_alias not created in PLC memory",
+        "Variable type mismatch"
+      ],
+      "solutions": [
+        "Verify hub_id with getLocalHubId()",
+        "Check variable name spelling",
+        "Ensure local_alias variable exists in PLC program",
+        "Match variable types between hubs"
+      ]
+    }
+  }
+}

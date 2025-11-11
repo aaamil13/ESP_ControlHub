@@ -16,6 +16,7 @@
 #include "DeviceConfigManager.h" // Device configuration manager
 #include "VariableRegistry.h" // Variable registry for unified variable access
 #include "MqttExportManager.h" // MQTT export manager for hybrid variable/command export
+#include "MeshExportManager.h" // Mesh export manager for variable sharing between hubs
 
 // Conditional protocol manager includes
 #ifdef USE_WIFI_DEVICES
@@ -63,6 +64,7 @@ private:
     DeviceConfigManager deviceConfigManager; // Device configuration manager
     VariableRegistry variableRegistry; // Variable registry for unified access
     MqttExportManager mqttExportManager; // MQTT export manager for hybrid export
+    MeshExportManager meshExportManager; // Mesh export manager for variable sharing
 
     // Conditional protocol managers
     #ifdef USE_WIFI_DEVICES
