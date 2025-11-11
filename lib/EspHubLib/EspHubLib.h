@@ -15,6 +15,7 @@
 #include "OtaManager.h" // New OtaManager
 #include "DeviceConfigManager.h" // Device configuration manager
 #include "VariableRegistry.h" // Variable registry for unified variable access
+#include "MqttExportManager.h" // MQTT export manager for hybrid variable/command export
 
 // Conditional protocol manager includes
 #ifdef USE_WIFI_DEVICES
@@ -61,6 +62,7 @@ private:
     OtaManager otaManager; // New OtaManager instance
     DeviceConfigManager deviceConfigManager; // Device configuration manager
     VariableRegistry variableRegistry; // Variable registry for unified access
+    MqttExportManager mqttExportManager; // MQTT export manager for hybrid export
 
     // Conditional protocol managers
     #ifdef USE_WIFI_DEVICES

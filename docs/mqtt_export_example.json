@@ -1,0 +1,70 @@
+{
+  "mqtt_export": {
+    "variables": {
+      "main.temperature": {
+        "topic": "sensors/temperature",
+        "access": "read",
+        "publish_on_change": true,
+        "min_interval_ms": 5000,
+        "retained": true,
+        "qos": 0
+      },
+      "main.humidity": {
+        "topic": "sensors/humidity",
+        "access": "read",
+        "publish_on_change": true,
+        "min_interval_ms": 5000,
+        "retained": true,
+        "qos": 0
+      },
+      "main.setpoint": {
+        "topic": "control/setpoint",
+        "access": "read_write",
+        "publish_on_change": true,
+        "min_interval_ms": 1000,
+        "retained": true,
+        "qos": 1,
+        "validation": {
+          "min": 15.0,
+          "max": 30.0
+        }
+      },
+      "main.pump_enabled": {
+        "topic": "control/pump",
+        "access": "read_write",
+        "publish_on_change": true,
+        "min_interval_ms": 0,
+        "retained": true,
+        "qos": 1
+      },
+      "main.alarm_text": {
+        "topic": "status/alarm",
+        "access": "read",
+        "publish_on_change": true,
+        "min_interval_ms": 0,
+        "retained": false,
+        "qos": 1
+      }
+    },
+    "commands": {
+      "activateScene": {
+        "topic": "commands/scene/activate",
+        "handler": "plc_activateScene",
+        "parameters": ["scene_name"],
+        "require_auth": false
+      },
+      "resetAlarm": {
+        "topic": "commands/alarm/reset",
+        "handler": "plc_resetAlarm",
+        "parameters": [],
+        "require_auth": false
+      },
+      "setSchedule": {
+        "topic": "commands/schedule/set",
+        "handler": "plc_setSchedule",
+        "parameters": ["day", "start_hour", "end_hour"],
+        "require_auth": true
+      }
+    }
+  }
+}

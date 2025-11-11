@@ -73,6 +73,13 @@ void EspHub::begin() {
     variableRegistry.setLocalHubId("hub_" + String(ESP.getEfuseMac(), HEX));
     EspHubLog->println("Variable Registry initialized");
 
+    // Initialize MqttExportManager
+    mqttExportManager.begin();
+    mqttExportManager.setMqttManager(&mqttManager);
+    mqttExportManager.setVariableRegistry(&variableRegistry);
+    mqttExportManager.setPlcEngine(&plcEngine);
+    EspHubLog->println("MQTT Export Manager initialized");
+
     // painlessMesh initialization
     // mesh.setDebugMsgTypes(ERROR | STARTUP); // set before init() so that you can see startup messages
     // mesh.init("EspHubMesh", "password1234", &meshScheduler, 5566);
@@ -107,6 +114,17 @@ void EspHub::setupMqtt(const char* server, int port, MQTT_CALLBACK_SIGNATURE, bo
 void EspHub::mqttCallback(char* topic, byte* payload, unsigned int length) {
     // Handle MQTT messages here, e.g., for OTA updates or PLC control
     EspHubLog->printf("MQTT message received on topic: %s\n", topic);
+
+    // Handle MQTT export manager messages (variable writes and commands)
+    // Null-terminate payload for safe string handling
+    char* message = (char*)malloc(length + 1);
+    if (message) {
+        memcpy(message, payload, length);
+        message[length] = '\0';
+        mqttExportManager.handleMqttMessage(String(topic), String(message));
+        free(message);
+    }
+
     // Example: Check for OTA update topic
     // TODO: Implement handleMqttMessage in OtaManager
     // if (otaManager.handleMqttMessage(topic, payload, length)) {
@@ -224,6 +242,7 @@ void EspHub::loop() {
 
     if (mesh.isRoot()) {
         mqttManager.loop();
+        mqttExportManager.loop(); // Process MQTT export auto-publishing
         // Publish MQTT Discovery messages periodically
         static unsigned long lastDiscoveryPublish = 0;
         if (millis() - lastDiscoveryPublish > 60000) { // Publish every minute

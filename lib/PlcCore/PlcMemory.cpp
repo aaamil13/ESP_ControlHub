@@ -53,6 +53,34 @@ bool PlcMemory::setValue(const std::string& name, T val) {
     return true;
 }
 
+// Template specialization for std::string setValue
+template<>
+bool PlcMemory::setValue<std::string>(const std::string& name, std::string val) {
+    if (!memoryMap.count(name)) {
+        return false;
+    }
+    PlcVariable& var = memoryMap[name];
+    if (var.type == PlcValueType::STRING_TYPE) {
+        strncpy(var.value.sVal, val.c_str(), sizeof(var.value.sVal) - 1);
+        var.value.sVal[sizeof(var.value.sVal) - 1] = '\0';
+        return true;
+    }
+    return false; // Type mismatch
+}
+
+// Template specialization for std::string getValue
+template<>
+std::string PlcMemory::getValue<std::string>(const std::string& name, std::string defaultValue) {
+    if (!memoryMap.count(name)) {
+        return defaultValue;
+    }
+    PlcVariable& var = memoryMap[name];
+    if (var.type == PlcValueType::STRING_TYPE) {
+        return std::string(var.value.sVal);
+    }
+    return defaultValue; // Type mismatch
+}
+
 template<typename T>
 T PlcMemory::getValue(const std::string& name, T defaultValue) {
     if (!memoryMap.count(name)) {
@@ -191,7 +219,7 @@ template bool PlcMemory::setValue<int32_t>(const std::string& name, int32_t val)
 template bool PlcMemory::setValue<uint32_t>(const std::string& name, uint32_t val);
 template bool PlcMemory::setValue<float>(const std::string& name, float val);
 template bool PlcMemory::setValue<double>(const std::string& name, double val);
-// String specialization defined above
+// std::string handled by template specialization above
 
 template bool PlcMemory::getValue<bool>(const std::string& name, bool defaultValue);
 template int8_t PlcMemory::getValue<int8_t>(const std::string& name, int8_t defaultValue);
@@ -202,7 +230,7 @@ template int32_t PlcMemory::getValue<int32_t>(const std::string& name, int32_t d
 template uint32_t PlcMemory::getValue<uint32_t>(const std::string& name, uint32_t defaultValue);
 template float PlcMemory::getValue<float>(const std::string& name, float defaultValue);
 template double PlcMemory::getValue<double>(const std::string& name, double defaultValue);
-// String specialization defined above
+// std::string handled by template specialization above
 
 // ========== IO Point Management Implementation ==========
 
