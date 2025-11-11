@@ -1,5 +1,5 @@
-#include "MqttDiscoveryManager.h"
-#include "StreamLogger.h"
+#include "../Export/MqttDiscoveryManager.h"
+#include "../Core/StreamLogger.h"
 
 extern StreamLogger* EspHubLog;
 

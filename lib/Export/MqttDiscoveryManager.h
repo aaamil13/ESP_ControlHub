@@ -3,8 +3,8 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#include "MqttManager.h"
-#include "../PlcCore/PlcEngine.h"
+#include "../Protocols/Mqtt/MqttManager.h"
+#include "../PlcEngine/Engine/PlcEngine.h"
 
 class MqttDiscoveryManager {
 public:

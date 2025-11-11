@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#include "../PlcCore/PlcMemory.h"
+#include "../PlcEngine/Engine/PlcMemory.h"
 
 /**
  * ProtocolManagerInterface - Base interface for all protocol managers

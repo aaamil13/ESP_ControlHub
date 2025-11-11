@@ -1,0 +1,22 @@
+{
+  "name": "EspHub-Export",
+  "version": "1.0.0",
+  "description": "Variable export systems - MQTT, Mesh, Home Assistant discovery",
+  "keywords": ["esp32", "mqtt", "mesh", "export", "homeassistant"],
+  "authors": [
+    {
+      "name": "EspHub Team"
+    }
+  ],
+  "dependencies": {
+    "EspHub-Core": "*",
+    "EspHub-PlcEngine": "*",
+    "EspHub-Protocols": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "frameworks": ["arduino", "espidf"],
+  "platforms": ["espressif32"]
+}

@@ -1,7 +1,7 @@
-#include "WebManager.h"
+#include "../UI/WebManager.h"
 #include <LittleFS.h>
-#include "StreamLogger.h"
-#include "DeviceRegistry.h"
+#include "../Core/StreamLogger.h"
+#include "../Devices/DeviceRegistry.h"
 #include <map>
 
 // Define LITTLEFS as an alias for LittleFS if not already defined

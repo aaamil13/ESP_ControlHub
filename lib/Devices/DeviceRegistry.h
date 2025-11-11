@@ -5,7 +5,7 @@
 #include <vector>
 #include <map>
 #include <functional>
-#include "../PlcCore/PlcMemory.h"
+#include "../PlcEngine/Engine/PlcMemory.h"
 
 // Protocol types
 enum class ProtocolType {

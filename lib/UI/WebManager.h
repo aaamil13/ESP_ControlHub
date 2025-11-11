@@ -4,9 +4,9 @@
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncWebSocket.h>
-#include "../PlcCore/PlcEngine.h" // For PLC config upload
-#include "MeshDeviceManager.h" // For mesh device monitoring
-#include "ZigbeeManager.h" // For Zigbee device monitoring
+#include "../PlcEngine/Engine/PlcEngine.h" // For PLC config upload
+#include "../Protocols/Mesh/MeshDeviceManager.h" // For mesh device monitoring
+#include "../Protocols/Zigbee/ZigbeeManager.h" // For Zigbee device monitoring
 
 class WebManager {
 public:

@@ -1,6 +1,6 @@
-#include "DeviceConfigManager.h"
-#include "DeviceRegistry.h"
-#include "Logger.h"
+#include "../Devices/DeviceConfigManager.h"
+#include "../Devices/DeviceRegistry.h"
+#include "../Core/Logger.h"
 #include <LittleFS.h>
 
 #define DEVICES_DIR "/config/devices"

@@ -6,7 +6,7 @@
 #include <map>
 #include <vector>
 #include <functional>
-#include "../PlcCore/PlcMemory.h"
+#include "../PlcEngine/Engine/PlcMemory.h"
 
 /**
  * VariableRegistry - Unified variable access system

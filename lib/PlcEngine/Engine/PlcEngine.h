@@ -3,8 +3,8 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#include "PlcMemory.h"
-#include "blocks/PlcBlock.h"
+#include "../PlcEngine/Engine/PlcMemory.h"
+#include "../Blocks/PlcBlock.h"
 #include <esp_task_wdt.h>
 #include <vector>
 #include <memory>
@@ -18,9 +18,9 @@ namespace std {
     }
 }
 #endif
-#include <TimeManager.h> // For scheduler blocks
-#include <MeshDeviceManager.h> // For sending commands to mesh devices
-#include "PlcProgram.h" // New PlcProgram class
+#include "../../Core/TimeManager.h" // For scheduler blocks
+#include "../../Protocols/Mesh/MeshDeviceManager.h" // For sending commands to mesh devices
+#include "../PlcEngine/Engine/PlcProgram.h" // New PlcProgram class
 
 enum class PlcEngineState { // Renamed to avoid conflict
     STOPPED,

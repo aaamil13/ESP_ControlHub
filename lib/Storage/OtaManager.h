@@ -5,7 +5,7 @@
 #include <HTTPClient.h>
 #include <Update.h>
 #include <WiFiClient.h>
-#include "StreamLogger.h" // For Log
+#include "../Core/StreamLogger.h" // For Log
 
 class OtaManager {
 public:

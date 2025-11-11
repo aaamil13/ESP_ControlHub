@@ -7,8 +7,8 @@
 #include <map>
 #include <vector>
 #include <functional>
-#include "VariableRegistry.h"
-#include "../PlcCore/PlcEngine.h"
+#include "../Export/VariableRegistry.h"
+#include "../PlcEngine/Engine/PlcEngine.h"
 
 /**
  * MeshExportManager - Mesh variable sharing system

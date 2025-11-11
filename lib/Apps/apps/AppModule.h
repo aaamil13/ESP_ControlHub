@@ -2,8 +2,8 @@
 #define APP_MODULE_H
 
 #include <ArduinoJson.h>
-#include "../../PlcCore/PlcEngine.h"
-#include "../WebManager.h" // For web server integration
+#include "../../PlcEngine/Engine/PlcEngine.h"
+#include "../../UI/WebManager.h" // For web server integration
 
 // Base class for all high-level application modules
 class AppModule {

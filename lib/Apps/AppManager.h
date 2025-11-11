@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory>
 #include "apps/AppModule.h"
-#include "../PlcCore/PlcEngine.h"
+#include "../PlcEngine/Engine/PlcEngine.h"
 #include "apps/ThermostatApp.h" // Include new app module
 
 class AppManager {

@@ -1,7 +1,7 @@
-#include "MqttManager.h"
+#include "../Protocols/Mqtt/MqttManager.h"
 #include <LittleFS.h>
 #include <WiFiClientSecure.h>
-#include "StreamLogger.h"
+#include "../Core/StreamLogger.h"
 
 // Define LITTLEFS as an alias for LittleFS if not already defined
 #ifndef LITTLEFS

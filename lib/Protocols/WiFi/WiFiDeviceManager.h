@@ -1,7 +1,7 @@
 #ifndef WIFI_DEVICE_MANAGER_H
 #define WIFI_DEVICE_MANAGER_H
 
-#include "ProtocolManagerInterface.h"
+#include "../Protocols/ProtocolManagerInterface.h"
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
 #include <map>

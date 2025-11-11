@@ -5,8 +5,8 @@
 #include <ArduinoJson.h>
 #include <map>
 #include <vector>
-#include "ProtocolManagerInterface.h"
-#include "../PlcCore/PlcMemory.h"
+#include "../Protocols/ProtocolManagerInterface.h"
+#include "../PlcEngine/Engine/PlcMemory.h"
 
 /**
  * DeviceConfigManager - Central coordinator for all devices

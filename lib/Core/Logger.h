@@ -2,7 +2,7 @@
 #define LOGGER_H
 
 #include <Arduino.h>
-#include "StreamLogger.h"
+#include "../Core/StreamLogger.h"
 
 // External logger instance
 extern StreamLogger* EspHubLog;

@@ -1,6 +1,6 @@
-#include "MeshDeviceManager.h"
-#include "StreamLogger.h" // For Log
-#include "../PlcCore/PlcEngine.h" // For accessing PLC memory
+#include "../Protocols/Mesh/MeshDeviceManager.h"
+#include "../Core/StreamLogger.h" // For Log
+#include "../PlcEngine/Engine/PlcEngine.h" // For accessing PLC memory
 
 extern StreamLogger* Log;
 

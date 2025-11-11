@@ -1,0 +1,21 @@
+{
+  "name": "EspHub-Devices",
+  "version": "1.0.0",
+  "description": "Device configuration and management system",
+  "keywords": ["esp32", "devices", "configuration"],
+  "authors": [
+    {
+      "name": "EspHub Team"
+    }
+  ],
+  "dependencies": {
+    "EspHub-Core": "*",
+    "EspHub-Protocols": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "frameworks": ["arduino", "espidf"],
+  "platforms": ["espressif32"]
+}

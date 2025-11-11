@@ -2,7 +2,7 @@
 #define STREAM_LOGGER_H
 
 #include <Arduino.h>
-#include "WebManager.h"
+#include "../UI/WebManager.h"
 
 class StreamLogger : public Print {
 public:

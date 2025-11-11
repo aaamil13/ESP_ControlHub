@@ -1,7 +1,7 @@
 #ifndef PLC_BLOCK_H
 #define PLC_BLOCK_H
 
-#include "../PlcMemory.h"
+#include "../Engine/PlcMemory.h"
 #include <ArduinoJson.h>
 
 class PlcBlock {

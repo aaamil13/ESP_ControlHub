@@ -5,10 +5,10 @@
 #include <ArduinoJson.h>
 #include <vector>
 #include <memory>
-#include "PlcMemory.h"
-#include "blocks/PlcBlock.h"
-#include <TimeManager.h> // For scheduler blocks
-#include <MeshDeviceManager.h> // For sending commands to mesh devices
+#include "../PlcEngine/Engine/PlcMemory.h"
+#include "../Blocks/PlcBlock.h"
+#include "../../Core/TimeManager.h" // For scheduler blocks
+#include "../../Protocols/Mesh/MeshDeviceManager.h" // For sending commands to mesh devices
 
 enum class PlcProgramState {
     STOPPED,

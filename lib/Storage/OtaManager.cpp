@@ -1,5 +1,5 @@
-#include "OtaManager.h"
-#include "StreamLogger.h"
+#include "../Storage/OtaManager.h"
+#include "../Core/StreamLogger.h"
 
 extern StreamLogger* EspHubLog;
 

@@ -1,5 +1,5 @@
-#include "EspHubLib.h"
-#include "mesh_protocol.h" // New mesh protocol header
+#include "EspHub.h"
+#include "../Protocols/Mesh/mesh_protocol.h" // New mesh protocol header
 #include <WiFi.h>
 
 StreamLogger* EspHubLog = nullptr;

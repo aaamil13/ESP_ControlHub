@@ -1,5 +1,5 @@
-#include "DeviceRegistry.h"
-#include "StreamLogger.h"
+#include "../Devices/DeviceRegistry.h"
+#include "../Core/StreamLogger.h"
 
 extern StreamLogger* EspHubLog;
 

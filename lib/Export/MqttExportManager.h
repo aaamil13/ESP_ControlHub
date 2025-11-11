@@ -6,9 +6,9 @@
 #include <map>
 #include <vector>
 #include <functional>
-#include "MqttManager.h"
-#include "VariableRegistry.h"
-#include "../PlcCore/PlcEngine.h"
+#include "../Protocols/Mqtt/MqttManager.h"
+#include "../Export/VariableRegistry.h"
+#include "../PlcEngine/Engine/PlcEngine.h"
 
 /**
  * MqttExportManager - Hybrid MQTT variable and command export

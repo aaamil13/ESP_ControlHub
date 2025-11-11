@@ -1,7 +1,7 @@
 #ifndef RF433_MANAGER_H
 #define RF433_MANAGER_H
 
-#include "ProtocolManagerInterface.h"
+#include "../Protocols/ProtocolManagerInterface.h"
 #include <RCSwitch.h>
 #include <ArduinoJson.h>
 #include <map>

@@ -1,6 +1,6 @@
-#include "WiFiDeviceManager.h"
-#include "Logger.h"
-#include "MqttManager.h"
+#include "../Protocols/WiFi/WiFiDeviceManager.h"
+#include "../Core/Logger.h"
+#include "../Protocols/Mqtt/MqttManager.h"
 #include <HTTPClient.h>
 #include <base64.h>
 

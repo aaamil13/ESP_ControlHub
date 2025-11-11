@@ -5,7 +5,7 @@
 #include <ArduinoJson.h>
 #include <vector>
 #include <map>
-#include "DeviceRegistry.h"
+#include "../Devices/DeviceRegistry.h"
 
 // Abstract base class for all protocol-specific device managers
 class DeviceManager {

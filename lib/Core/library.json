@@ -1,0 +1,17 @@
+{
+  "name": "EspHub-Core",
+  "version": "1.0.0",
+  "description": "Core system components for EspHub - logging, time management, and main library",
+  "keywords": ["esp32", "core", "logging", "time"],
+  "authors": [
+    {
+      "name": "EspHub Team"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "frameworks": ["arduino", "espidf"],
+  "platforms": ["espressif32"]
+}

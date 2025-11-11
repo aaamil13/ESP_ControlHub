@@ -1,5 +1,5 @@
-#include "DeviceManager.h"
-#include "StreamLogger.h"
+#include "../Devices/DeviceManager.h"
+#include "../Core/StreamLogger.h"
 
 extern StreamLogger* EspHubLog;
 

@@ -1,0 +1,20 @@
+{
+  "name": "EspHub-Storage",
+  "version": "1.0.0",
+  "description": "Configuration persistence, user management, and OTA updates",
+  "keywords": ["esp32", "storage", "ota", "users"],
+  "authors": [
+    {
+      "name": "EspHub Team"
+    }
+  ],
+  "dependencies": {
+    "EspHub-Core": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "frameworks": ["arduino", "espidf"],
+  "platforms": ["espressif32"]
+}

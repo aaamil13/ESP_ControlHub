@@ -1,4 +1,4 @@
-#include "StreamLogger.h"
+#include "../Core/StreamLogger.h"
 
 StreamLogger::StreamLogger(WebManager& webManager) : _webManager(webManager) {
 }

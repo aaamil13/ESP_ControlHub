@@ -1,0 +1,21 @@
+{
+  "name": "EspHub-UI",
+  "version": "1.0.0",
+  "description": "Web server and user interface management",
+  "keywords": ["esp32", "webserver", "ui", "http"],
+  "authors": [
+    {
+      "name": "EspHub Team"
+    }
+  ],
+  "dependencies": {
+    "EspHub-Core": "*",
+    "EspHub-PlcEngine": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "frameworks": ["arduino", "espidf"],
+  "platforms": ["espressif32"]
+}

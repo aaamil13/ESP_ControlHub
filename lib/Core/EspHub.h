@@ -3,32 +3,32 @@
 
 #include <Arduino.h>
 #include <painlessMesh.h>
-#include "MqttManager.h"
-#include "../PlcCore/PlcEngine.h"
-#include "WebManager.h"
-#include "StreamLogger.h"
-#include "TimeManager.h"
-#include "AppManager.h"
-#include "MeshDeviceManager.h" // New MeshDeviceManager
-#include "UserManager.h" // New UserManager
-#include "MqttDiscoveryManager.h" // New MqttDiscoveryManager
-#include "OtaManager.h" // New OtaManager
-#include "DeviceConfigManager.h" // Device configuration manager
-#include "VariableRegistry.h" // Variable registry for unified variable access
-#include "MqttExportManager.h" // MQTT export manager for hybrid variable/command export
-#include "MeshExportManager.h" // Mesh export manager for variable sharing between hubs
+#include "../Protocols/Mqtt/MqttManager.h"
+#include "../PlcEngine/Engine/PlcEngine.h"
+#include "../UI/WebManager.h"
+#include "../Core/StreamLogger.h"
+#include "../Core/TimeManager.h"
+#include "../Apps/AppManager.h"
+#include "../Protocols/Mesh/MeshDeviceManager.h" // New MeshDeviceManager
+#include "../Storage/UserManager.h" // New UserManager
+#include "../Export/MqttDiscoveryManager.h" // New MqttDiscoveryManager
+#include "../Storage/OtaManager.h" // New OtaManager
+#include "../Devices/DeviceConfigManager.h" // Device configuration manager
+#include "../Export/VariableRegistry.h" // Variable registry for unified variable access
+#include "../Export/MqttExportManager.h" // MQTT export manager for hybrid variable/command export
+#include "../Export/MeshExportManager.h" // Mesh export manager for variable sharing between hubs
 
 // Conditional protocol manager includes
 #ifdef USE_WIFI_DEVICES
-#include "WiFiDeviceManager.h"
+#include "../Protocols/WiFi/WiFiDeviceManager.h"
 #endif
 
 #ifdef USE_RF433
-#include "RF433Manager.h"
+#include "../Protocols/RF433/RF433Manager.h"
 #endif
 
 #ifdef USE_ZIGBEE
-#include "ZigbeeManager.h"
+#include "../Protocols/Zigbee/ZigbeeManager.h"
 #endif
 
 extern StreamLogger* EspHubLog;

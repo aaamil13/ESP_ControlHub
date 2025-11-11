@@ -1,5 +1,5 @@
-#include "mesh_protocol.h"
-#include "StreamLogger.h" // For Log
+#include "../Protocols/Mesh/mesh_protocol.h"
+#include "../Core/StreamLogger.h" // For Log
 
 extern StreamLogger* Log;
 

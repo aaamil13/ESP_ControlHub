@@ -1,0 +1,21 @@
+{
+  "name": "EspHub-Apps",
+  "version": "1.0.0",
+  "description": "Application framework and application manager",
+  "keywords": ["esp32", "apps", "applications"],
+  "authors": [
+    {
+      "name": "EspHub Team"
+    }
+  ],
+  "dependencies": {
+    "EspHub-Core": "*",
+    "EspHub-PlcEngine": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "frameworks": ["arduino", "espidf"],
+  "platforms": ["espressif32"]
+}

@@ -1,6 +1,6 @@
-#include "MeshExportManager.h"
-#include "Logger.h"
-#include "mesh_protocol.h"
+#include "../Export/MeshExportManager.h"
+#include "../Core/Logger.h"
+#include "../Protocols/Mesh/mesh_protocol.h"
 #include <LittleFS.h>
 
 MeshExportManager::MeshExportManager()

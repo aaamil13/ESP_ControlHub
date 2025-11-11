@@ -1,5 +1,5 @@
-#include "ZigbeeManager.h"
-#include "Logger.h"
+#include "../Protocols/Zigbee/ZigbeeManager.h"
+#include "../Core/Logger.h"
 
 ZigbeeManager::ZigbeeManager(MqttManager* mqtt, const String& bridgeTopic)
     : mqtt(mqtt),

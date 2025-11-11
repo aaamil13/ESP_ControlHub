@@ -1,8 +1,8 @@
-#include "VariableRegistry.h"
-#include "Logger.h"
-#include "../PlcCore/PlcEngine.h"
-#include "DeviceConfigManager.h"
-#include "MqttManager.h"
+#include "../Export/VariableRegistry.h"
+#include "../Core/Logger.h"
+#include "../PlcEngine/Engine/PlcEngine.h"
+#include "../Devices/DeviceConfigManager.h"
+#include "../Protocols/Mqtt/MqttManager.h"
 
 VariableRegistry::VariableRegistry()
     : plcEngine(nullptr),

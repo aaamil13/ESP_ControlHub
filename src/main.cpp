@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <EspHubLib.h>
+#include <EspHub.h>
 #include <WiFi.h>
 // --- MQTT, Time and Mesh Configuration ---
 const char* mqtt_server = "YOUR_MQTT_BROKER_IP";

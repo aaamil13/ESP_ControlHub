@@ -1,5 +1,5 @@
-#include "UserManager.h"
-#include "StreamLogger.h"
+#include "../Storage/UserManager.h"
+#include "../Core/StreamLogger.h"
 #include <mbedtls/md.h> // For SHA256 hashing
 
 extern StreamLogger* EspHubLog;

@@ -1,8 +1,8 @@
 #ifndef ZIGBEE_MANAGER_H
 #define ZIGBEE_MANAGER_H
 
-#include "ProtocolManagerInterface.h"
-#include "MqttManager.h"
+#include "../Protocols/ProtocolManagerInterface.h"
+#include "../Protocols/Mqtt/MqttManager.h"
 #include <ArduinoJson.h>
 #include <functional>
 #include <map>
