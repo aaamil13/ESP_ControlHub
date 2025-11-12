@@ -10,7 +10,10 @@
       "Bash(d:\\Dev\\ESP\\EspHub\\platformio_new.ini)",
       "Bash(git mv:*)",
       "Bash(python update_includes.py:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(python:*)",
+      "Bash(taskkill:*)",
+      "Bash(nul)"
     ],
     "deny": [],
     "ask": []
