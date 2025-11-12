@@ -88,6 +88,13 @@ void EspHub::begin() {
     meshExportManager.setLocalHubId("hub_" + String(ESP.getEfuseMac(), HEX));
     EspHubLog->println("Mesh Export Manager initialized");
 
+    // Initialize IOEventManager
+    ioEventManager.begin();
+    ioEventManager.setDeviceRegistry(&DeviceRegistry::getInstance());
+    ioEventManager.setPlcEngine(&plcEngine);
+    ioEventManager.setTimeManager(&timeManager);
+    EspHubLog->println("IO Event Manager initialized");
+
     // painlessMesh initialization
     // mesh.setDebugMsgTypes(ERROR | STARTUP); // set before init() so that you can see startup messages
     // mesh.init("EspHubMesh", "password1234", &meshScheduler, 5566);
@@ -229,12 +236,44 @@ void EspHub::restartEsp() {
     ESP.restart();
 }
 
+// ============================================================================
+// Event System Methods
+// ============================================================================
+
+void EspHub::loadEventConfiguration(const char* jsonConfig) {
+    EspHubLog->println("Loading event configuration...");
+
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, jsonConfig);
+
+    if (error) {
+        EspHubLog->printf("ERROR: Failed to parse event config: %s\n", error.c_str());
+        return;
+    }
+
+    ioEventManager.loadConfig(doc.as<JsonObject>());
+    EspHubLog->println("Event configuration loaded successfully");
+}
+
+String EspHub::getEventHistory(bool unreadOnly) {
+    return ioEventManager.serializeEventsToJson(unreadOnly);
+}
+
+void EspHub::clearEventHistory() {
+    ioEventManager.clearHistory();
+}
+
+void EspHub::markEventsAsRead() {
+    ioEventManager.markEventsAsRead();
+}
+
 void EspHub::loop() {
     mesh.update();
     appManager.updateAll();
     meshDeviceManager.checkOfflineDevices(60000); // Check for offline devices every minute (60 seconds)
     plcEngine.evaluateAllPrograms(); // Evaluate all running PLC programs
     meshExportManager.loop(); // Process mesh variable exports (all nodes)
+    ioEventManager.loop(); // Check I/O and scheduled events
 
     // Call protocol manager loop() methods
     #ifdef USE_WIFI_DEVICES

@@ -17,6 +17,7 @@
 #include "../Export/VariableRegistry.h" // Variable registry for unified variable access
 #include "../Export/MqttExportManager.h" // MQTT export manager for hybrid variable/command export
 #include "../Export/MeshExportManager.h" // Mesh export manager for variable sharing between hubs
+#include "../PlcEngine/Events/IOEventManager.h" // Event-driven system for I/O and scheduled triggers
 
 // Conditional protocol manager includes
 #ifdef USE_WIFI_DEVICES
@@ -50,6 +51,12 @@ public:
     void factoryReset();
     void restartEsp(); // New method for software restart
 
+    // Event system
+    void loadEventConfiguration(const char* jsonConfig); // Load event triggers from JSON
+    String getEventHistory(bool unreadOnly = true); // Get event history as JSON
+    void clearEventHistory(); // Clear event history
+    void markEventsAsRead(); // Mark events as published to MQTT
+
 private:
     painlessMesh mesh;
     MqttManager mqttManager;
@@ -65,6 +72,7 @@ private:
     VariableRegistry variableRegistry; // Variable registry for unified access
     MqttExportManager mqttExportManager; // MQTT export manager for hybrid export
     MeshExportManager meshExportManager; // Mesh export manager for variable sharing
+    IOEventManager ioEventManager; // Event-driven system for I/O and scheduled triggers
 
     // Conditional protocol managers
     #ifdef USE_WIFI_DEVICES

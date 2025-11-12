@@ -1,0 +1,90 @@
+{
+  "io_triggers": [
+    {
+      "name": "temperature_alarm",
+      "type": "value_threshold",
+      "endpoint": "kitchen.zigbee.temp_sensor.temperature.real",
+      "program": "cooling_program",
+      "priority": "critical",
+      "threshold": 30.0,
+      "threshold_rising": true,
+      "debounce_ms": 5000,
+      "enabled": true
+    },
+    {
+      "name": "door_sensor_changed",
+      "type": "input_changed",
+      "endpoint": "entrance.mesh.door_sensor.state.bool",
+      "program": "security_program",
+      "priority": "normal",
+      "debounce_ms": 1000,
+      "enabled": true
+    },
+    {
+      "name": "water_leak_offline",
+      "type": "input_offline",
+      "endpoint": "basement.wifi.leak_sensor.state.bool",
+      "program": "alert_program",
+      "priority": "critical",
+      "enabled": true
+    },
+    {
+      "name": "hvac_output_error",
+      "type": "output_error",
+      "endpoint": "living_room.zigbee.hvac.power.bool",
+      "program": "diagnostic_program",
+      "priority": "critical",
+      "enabled": true
+    }
+  ],
+  "scheduled_triggers": [
+    {
+      "name": "morning_routine",
+      "program": "morning_startup",
+      "priority": "normal",
+      "schedule": {
+        "hour": 6,
+        "minute": 30,
+        "days": [1, 2, 3, 4, 5],
+        "months": []
+      },
+      "enabled": true
+    },
+    {
+      "name": "evening_lights",
+      "program": "evening_lighting",
+      "priority": "normal",
+      "schedule": {
+        "hour": 18,
+        "minute": 0,
+        "days": [],
+        "months": []
+      },
+      "enabled": true
+    },
+    {
+      "name": "weekly_maintenance",
+      "program": "maintenance_check",
+      "priority": "normal",
+      "schedule": {
+        "hour": 2,
+        "minute": 0,
+        "days": [7],
+        "months": []
+      },
+      "enabled": true
+    },
+    {
+      "name": "summer_cooling",
+      "program": "climate_control",
+      "priority": "normal",
+      "schedule": {
+        "hour": 12,
+        "minute": 0,
+        "days": [],
+        "months": [6, 7, 8]
+      },
+      "enabled": true
+    }
+  ]
+}

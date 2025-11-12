@@ -10,6 +10,7 @@ public:
     void begin(const char* tz_info);
     String getFormattedTime();
     bool isTimeSet();
+    tm getCurrentTime(); // Get current time as tm struct
 
 private:
     const char* ntpServer = "pool.ntp.org";

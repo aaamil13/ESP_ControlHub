@@ -21,3 +21,12 @@ bool TimeManager::isTimeSet() {
     struct tm timeinfo;
     return getLocalTime(&timeinfo);
 }
+
+tm TimeManager::getCurrentTime() {
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+        // Return empty tm if time not set
+        memset(&timeinfo, 0, sizeof(timeinfo));
+    }
+    return timeinfo;
+}
