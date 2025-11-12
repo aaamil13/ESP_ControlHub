@@ -1,0 +1,241 @@
+{
+  "program_name": "local_io_control_example",
+  "description": "Temperature control using local hardware I/O pins",
+  "author": "EspHub",
+  "version": "1.0.0",
+
+  "memory": {
+    "_comment": "Note: Local IO variables (DI.*, DO.*, AI.*, AO.*) are automatically declared by LocalIOManager",
+
+    "temp_setpoint": {
+      "type": "real",
+      "initial_value": 22.0,
+      "retentive": true,
+      "description": "Desired temperature"
+    },
+    "temp_hysteresis": {
+      "type": "real",
+      "initial_value": 0.5,
+      "retentive": true,
+      "description": "Temperature hysteresis"
+    },
+    "upper_limit": {
+      "type": "real",
+      "initial_value": 0.0,
+      "description": "Calculated upper temperature limit"
+    },
+    "lower_limit": {
+      "type": "real",
+      "initial_value": 0.0,
+      "description": "Calculated lower temperature limit"
+    },
+    "temp_too_high": {
+      "type": "bool",
+      "initial_value": false,
+      "description": "Temperature above upper limit"
+    },
+    "temp_too_low": {
+      "type": "bool",
+      "initial_value": false,
+      "description": "Temperature below lower limit"
+    },
+    "heating_enabled": {
+      "type": "bool",
+      "initial_value": false,
+      "description": "Heating logic output"
+    },
+    "manual_override": {
+      "type": "bool",
+      "initial_value": false,
+      "description": "Manual control mode"
+    },
+    "alarm_acknowledged": {
+      "type": "bool",
+      "initial_value": false,
+      "description": "High temp alarm acknowledged"
+    },
+    "alarm_active": {
+      "type": "bool",
+      "initial_value": false,
+      "description": "High temp alarm active state"
+    }
+  },
+
+  "io_points": [],
+  "_io_points_comment": "No mesh IO points - we're using local hardware I/O instead",
+
+  "init": [
+    {
+      "action": "set_value",
+      "variable": "heating_enabled",
+      "value": false,
+      "comment": "Ensure heating is off at startup"
+    }
+  ],
+
+  "logic": [
+    {
+      "comment": "=== Temperature Limit Calculations ===",
+      "block_type": "ADD",
+      "inputs": {
+        "in1": "temp_setpoint",
+        "in2": "temp_hysteresis"
+      },
+      "outputs": {
+        "out": "upper_limit"
+      }
+    },
+    {
+      "block_type": "SUB",
+      "inputs": {
+        "in1": "temp_setpoint",
+        "in2": "temp_hysteresis"
+      },
+      "outputs": {
+        "out": "lower_limit"
+      }
+    },
+
+    {
+      "comment": "=== Temperature Comparisons ===",
+      "block_type": "GT",
+      "inputs": {
+        "in1": "AI.Temperature",
+        "in2": "upper_limit"
+      },
+      "outputs": {
+        "out": "temp_too_high"
+      }
+    },
+    {
+      "block_type": "LT",
+      "inputs": {
+        "in1": "AI.Temperature",
+        "in2": "lower_limit"
+      },
+      "outputs": {
+        "out": "temp_too_low"
+      }
+    },
+
+    {
+      "comment": "=== Heating Control Logic ===",
+      "comment2": "Enable heating if temp too low AND sensor online AND NOT in manual mode",
+      "block_type": "AND",
+      "inputs": {
+        "in1": "temp_too_low",
+        "in2": "DI.TempSensorOnline"
+      },
+      "outputs": {
+        "out": "heating_enabled"
+      }
+    },
+    {
+      "block_type": "NOT",
+      "inputs": {
+        "in": "manual_override"
+      },
+      "outputs": {
+        "out": "DO.HeaterEnable"
+      }
+    },
+    {
+      "comment": "Final heater control: heating_enabled AND NOT manual_override",
+      "block_type": "AND",
+      "inputs": {
+        "in1": "heating_enabled",
+        "in2": "DO.HeaterEnable"
+      },
+      "outputs": {
+        "out": "DO.HeaterEnable"
+      }
+    },
+
+    {
+      "comment": "=== Alarm Logic ===",
+      "comment2": "High temperature alarm at 30°C",
+      "block_type": "GT",
+      "inputs": {
+        "in1": "AI.Temperature",
+        "in2": 30.0
+      },
+      "outputs": {
+        "out": "alarm_active"
+      }
+    },
+    {
+      "comment": "Alarm LED: active AND NOT acknowledged",
+      "block_type": "NOT",
+      "inputs": {
+        "in": "alarm_acknowledged"
+      },
+      "outputs": {
+        "out": "DO.AlarmLED"
+      }
+    },
+    {
+      "block_type": "AND",
+      "inputs": {
+        "in1": "alarm_active",
+        "in2": "DO.AlarmLED"
+      },
+      "outputs": {
+        "out": "DO.AlarmLED"
+      }
+    },
+
+    {
+      "comment": "=== Button Logic ===",
+      "comment2": "Acknowledge button clears alarm",
+      "block_type": "OR",
+      "inputs": {
+        "in1": "DI.AckButton",
+        "in2": "alarm_acknowledged"
+      },
+      "outputs": {
+        "out": "alarm_acknowledged"
+      }
+    },
+
+    {
+      "comment": "=== Status LED Control ===",
+      "comment2": "Status LED shows system running (blink via PWM or direct output)",
+      "block_type": "AND",
+      "inputs": {
+        "in1": "DI.TempSensorOnline",
+        "in2": true
+      },
+      "outputs": {
+        "out": "DO.StatusLED"
+      }
+    },
+
+    {
+      "comment": "=== Fan Speed Control (PWM) ===",
+      "comment2": "Fan speed based on temperature (simple proportional control)",
+      "comment3": "Map temperature range 20-30°C to fan speed 0-100%",
+      "block_type": "SUB",
+      "inputs": {
+        "in1": "AI.Temperature",
+        "in2": 20.0
+      },
+      "outputs": {
+        "out": "AO.FanSpeed"
+      }
+    },
+    {
+      "comment": "Scale by 10 to get percentage (0-100%)",
+      "block_type": "MUL",
+      "inputs": {
+        "in1": "AO.FanSpeed",
+        "in2": 10.0
+      },
+      "outputs": {
+        "out": "AO.FanSpeed"
+      }
+    }
+  ],
+
+  "cycle_time_ms": 100,
+  "_comment": "This PLC program uses local hardware I/O variables that are automatically declared and synchronized by LocalIOManager"
+}

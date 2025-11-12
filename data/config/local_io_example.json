@@ -1,0 +1,233 @@
+{
+  "description": "Local IO Configuration Example for ESP32",
+  "version": "1.0.0",
+
+  "digital_inputs": [
+    {
+      "name": "button1",
+      "pin": 15,
+      "mode": "INPUT_PULLUP",
+      "invert": true,
+      "debounce_ms": 50,
+      "filter_samples": 0,
+      "description": "Push button with pullup, active low"
+    },
+    {
+      "name": "door_sensor",
+      "pin": 16,
+      "mode": "INPUT",
+      "invert": false,
+      "debounce_ms": 100,
+      "filter_samples": 5,
+      "description": "Door contact sensor with filtering"
+    },
+    {
+      "name": "motion_detector",
+      "pin": 17,
+      "mode": "INPUT",
+      "invert": false,
+      "debounce_ms": 200,
+      "filter_samples": 0,
+      "description": "PIR motion sensor"
+    }
+  ],
+
+  "digital_outputs": [
+    {
+      "name": "relay1",
+      "pin": 23,
+      "invert": false,
+      "initial_state": false,
+      "pulse_width_ms": 100,
+      "safe_state": false,
+      "description": "Main relay output"
+    },
+    {
+      "name": "led_status",
+      "pin": 2,
+      "invert": false,
+      "initial_state": true,
+      "pulse_width_ms": 500,
+      "safe_state": false,
+      "description": "Status LED (built-in)"
+    },
+    {
+      "name": "valve_control",
+      "pin": 22,
+      "invert": false,
+      "initial_state": false,
+      "pulse_width_ms": 100,
+      "safe_state": false,
+      "description": "Solenoid valve control"
+    }
+  ],
+
+  "analog_inputs": [
+    {
+      "name": "temp_sensor",
+      "pin": 36,
+      "range": "0-3.3V",
+      "resolution": 12,
+      "sample_rate": 100,
+      "filter_samples": 10,
+      "calib_offset": 0.0,
+      "calib_scale": 1.0,
+      "min_value": 0.0,
+      "max_value": 100.0,
+      "description": "Temperature sensor (LM35: 10mV/°C)"
+    },
+    {
+      "name": "pressure_sensor",
+      "pin": 39,
+      "range": "0-3.3V",
+      "resolution": 12,
+      "sample_rate": 50,
+      "filter_samples": 20,
+      "calib_offset": 0.5,
+      "calib_scale": 10.0,
+      "min_value": 0.0,
+      "max_value": 10.0,
+      "description": "Pressure sensor (0.5-4.5V = 0-10 bar)"
+    },
+    {
+      "name": "humidity_sensor",
+      "pin": 34,
+      "range": "0-3.3V",
+      "resolution": 12,
+      "sample_rate": 10,
+      "filter_samples": 30,
+      "calib_offset": 0.0,
+      "calib_scale": 30.303,
+      "min_value": 0.0,
+      "max_value": 100.0,
+      "description": "Humidity sensor (0-3.3V = 0-100%)"
+    }
+  ],
+
+  "pwm_outputs": [
+    {
+      "name": "fan_speed",
+      "pin": 18,
+      "frequency": 25000,
+      "resolution": 10,
+      "channel": 0,
+      "initial_duty": 0.0,
+      "description": "Fan speed control (25kHz PWM)"
+    },
+    {
+      "name": "led_brightness",
+      "pin": 19,
+      "frequency": 5000,
+      "resolution": 10,
+      "channel": 1,
+      "initial_duty": 50.0,
+      "description": "LED dimming (5kHz PWM)"
+    },
+    {
+      "name": "heater_power",
+      "pin": 21,
+      "frequency": 1000,
+      "resolution": 10,
+      "channel": 2,
+      "initial_duty": 0.0,
+      "description": "Heater power control (1kHz PWM)"
+    }
+  ],
+
+  "pulse_counters": [
+    {
+      "name": "water_flow",
+      "pin": 25,
+      "edge": "RISING",
+      "mode": "FREQUENCY",
+      "sample_window_ms": 1000,
+      "enable_filter": true,
+      "filter_threshold_ns": 1000,
+      "description": "Water flow meter (pulses per liter)"
+    },
+    {
+      "name": "rpm_sensor",
+      "pin": 26,
+      "edge": "RISING",
+      "mode": "FREQUENCY",
+      "sample_window_ms": 1000,
+      "enable_filter": true,
+      "filter_threshold_ns": 1000,
+      "description": "Motor RPM sensor"
+    },
+    {
+      "name": "event_counter",
+      "pin": 27,
+      "edge": "BOTH",
+      "mode": "COUNTER",
+      "sample_window_ms": 1000,
+      "enable_filter": false,
+      "filter_threshold_ns": 1000,
+      "description": "General purpose event counter"
+    }
+  ],
+
+  "plc_mapping": {
+    "description": "Automatic PLC variable mapping",
+    "inputs": [
+      {
+        "io_pin": "button1",
+        "plc_var": "DI.Button1",
+        "type": "bool"
+      },
+      {
+        "io_pin": "door_sensor",
+        "plc_var": "DI.DoorSensor",
+        "type": "bool"
+      },
+      {
+        "io_pin": "temp_sensor",
+        "plc_var": "AI.Temperature",
+        "type": "real"
+      },
+      {
+        "io_pin": "pressure_sensor",
+        "plc_var": "AI.Pressure",
+        "type": "real"
+      },
+      {
+        "io_pin": "water_flow",
+        "plc_var": "AI.WaterFlow",
+        "type": "real"
+      }
+    ],
+    "outputs": [
+      {
+        "io_pin": "relay1",
+        "plc_var": "DO.Relay1",
+        "type": "bool"
+      },
+      {
+        "io_pin": "led_status",
+        "plc_var": "DO.StatusLED",
+        "type": "bool"
+      },
+      {
+        "io_pin": "fan_speed",
+        "plc_var": "AO.FanSpeed",
+        "type": "real"
+      },
+      {
+        "io_pin": "heater_power",
+        "plc_var": "AO.HeaterPower",
+        "type": "real"
+      }
+    ]
+  },
+
+  "comments": {
+    "pin_mapping": "ESP32 GPIO pins suitable for each function",
+    "digital_inputs": "GPIO 0-39 (avoid 1, 3, 6-11 for flash)",
+    "digital_outputs": "GPIO 0-33 (avoid input-only pins 34-39)",
+    "analog_inputs": "ADC1: GPIO 32-39 (ADC2 conflicts with WiFi)",
+    "pwm_outputs": "Any GPIO 0-33 (16 LEDC channels available)",
+    "pulse_counters": "Any GPIO (8 PCNT units available)",
+    "safe_pins": "GPIO 0, 2, 4, 5, 12-15, 16-19, 21-23, 25-27, 32-39",
+    "avoid": "GPIO 1, 3 (UART), 6-11 (flash), 34-39 (input-only)"
+  }
+}

@@ -30,6 +30,14 @@ EspHub е мощна платформа за домашна и индустри�
 - **Event history** - 100 events circular buffer with MQTT export
 - **CPU optimization** - Event-driven vs polling reduces load by 80%
 
+### 🔌 Local Hardware I/O
+- **Digital I/O** - Debounced inputs, pulse outputs, edge detection
+- **Analog I/O** - 12-bit ADC with filtering and calibration
+- **PWM Output** - 16 channels, configurable frequency/duty cycle
+- **Pulse Counter** - Hardware counting, frequency/period measurement
+- **Auto-mapping** - Direct PLC variable integration
+- **Safety features** - Safe states, error handling
+
 ### 📡 Protocol Support
 - **Mesh** - Zone-based ESP-NOW mesh (custom)
 - **MQTT** - TLS support, Home Assistant discovery
