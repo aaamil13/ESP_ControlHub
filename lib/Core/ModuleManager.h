@@ -221,6 +221,11 @@ public:
     JsonDocument getSystemStatus() const;
 
     /**
+     * Get summary of all modules (for REST API)
+     */
+    JsonDocument getModuleSummary() const;
+
+    /**
      * Get detailed information about a specific module
      */
     JsonDocument getModuleInfo(const String& moduleName) const;

@@ -354,3 +354,158 @@ void WebManager::handleZigbeeRequest(const String& requestType, const JsonObject
         client->text(responseStr);
     }
 }
+
+// ============================================================================
+// Module Management API
+// ============================================================================
+
+void WebManager::setupModuleAPI() {
+    if (!_moduleManager) {
+        return; // ModuleManager not set
+    }
+
+    // GET /api/modules - List all modules
+    server.on("/api/modules", HTTP_GET, [this](AsyncWebServerRequest *request){
+        this->handleGetModules(request);
+    });
+
+    // GET /api/modules/:name - Get module info
+    server.on("^\\/api\\/modules\\/([a-zA-Z0-9_]+)$", HTTP_GET, [this](AsyncWebServerRequest *request){
+        this->handleGetModule(request);
+    });
+
+    // POST /api/modules/:name/enable - Enable module
+    server.on("^\\/api\\/modules\\/([a-zA-Z0-9_]+)\\/enable$", HTTP_POST, [this](AsyncWebServerRequest *request){
+        this->handleEnableModule(request);
+    });
+
+    // POST /api/modules/:name/disable - Disable module
+    server.on("^\\/api\\/modules\\/([a-zA-Z0-9_]+)\\/disable$", HTTP_POST, [this](AsyncWebServerRequest *request){
+        this->handleDisableModule(request);
+    });
+
+    // GET /api/modules/:name/stats - Get module statistics
+    server.on("^\\/api\\/modules\\/([a-zA-Z0-9_]+)\\/stats$", HTTP_GET, [this](AsyncWebServerRequest *request){
+        this->handleGetModuleStats(request);
+    });
+
+    // Serve modules management page
+    server.on("/modules", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send(LITTLEFS, "/modules.html", "text/html");
+    });
+}
+
+void WebManager::handleGetModules(AsyncWebServerRequest *request) {
+    if (!_moduleManager) {
+        request->send(503, "application/json", "{\"error\":\"ModuleManager not available\"}");
+        return;
+    }
+
+    JsonDocument doc = _moduleManager->getModuleSummary();
+    String response;
+    serializeJson(doc, response);
+    request->send(200, "application/json", response);
+}
+
+void WebManager::handleGetModule(AsyncWebServerRequest *request) {
+    if (!_moduleManager) {
+        request->send(503, "application/json", "{\"error\":\"ModuleManager not available\"}");
+        return;
+    }
+
+    // Extract module name from URL
+    String path = request->url();
+    int lastSlash = path.lastIndexOf('/');
+    int secondLastSlash = path.lastIndexOf('/', lastSlash - 1);
+    String moduleName = path.substring(secondLastSlash + 1, lastSlash);
+
+    JsonDocument doc = _moduleManager->getModuleInfo(moduleName);
+    if (doc.isNull()) {
+        request->send(404, "application/json", "{\"error\":\"Module not found\"}");
+        return;
+    }
+
+    String response;
+    serializeJson(doc, response);
+    request->send(200, "application/json", response);
+}
+
+void WebManager::handleEnableModule(AsyncWebServerRequest *request) {
+    if (!_moduleManager) {
+        request->send(503, "application/json", "{\"error\":\"ModuleManager not available\"}");
+        return;
+    }
+
+    // Extract module name from URL
+    String path = request->url();
+    int lastSlash = path.lastIndexOf('/');
+    int secondLastSlash = path.lastIndexOf('/', lastSlash - 1);
+    String moduleName = path.substring(secondLastSlash + 1, lastSlash);
+
+    bool success = _moduleManager->enableModule(moduleName);
+
+    JsonDocument response;
+    response["success"] = success;
+    response["module"] = moduleName;
+    response["state"] = success ? "enabled" : "error";
+    if (!success) {
+        response["error"] = _moduleManager->getModule(moduleName)->getLastError();
+    }
+
+    String responseStr;
+    serializeJson(response, responseStr);
+    request->send(success ? 200 : 400, "application/json", responseStr);
+}
+
+void WebManager::handleDisableModule(AsyncWebServerRequest *request) {
+    if (!_moduleManager) {
+        request->send(503, "application/json", "{\"error\":\"ModuleManager not available\"}");
+        return;
+    }
+
+    // Extract module name from URL
+    String path = request->url();
+    int lastSlash = path.lastIndexOf('/');
+    int secondLastSlash = path.lastIndexOf('/', lastSlash - 1);
+    String moduleName = path.substring(secondLastSlash + 1, lastSlash);
+
+    bool success = _moduleManager->disableModule(moduleName);
+
+    JsonDocument response;
+    response["success"] = success;
+    response["module"] = moduleName;
+    response["state"] = success ? "disabled" : "error";
+    if (!success) {
+        const Module* module = _moduleManager->getModule(moduleName);
+        if (module) {
+            response["error"] = module->getLastError();
+        }
+    }
+
+    String responseStr;
+    serializeJson(response, responseStr);
+    request->send(success ? 200 : 400, "application/json", responseStr);
+}
+
+void WebManager::handleGetModuleStats(AsyncWebServerRequest *request) {
+    if (!_moduleManager) {
+        request->send(503, "application/json", "{\"error\":\"ModuleManager not available\"}");
+        return;
+    }
+
+    // Extract module name from URL
+    String path = request->url();
+    int lastSlash = path.lastIndexOf('/');
+    int secondLastSlash = path.lastIndexOf('/', lastSlash - 1);
+    String moduleName = path.substring(secondLastSlash + 1, lastSlash);
+
+    JsonDocument doc = _moduleManager->getModuleStatistics(moduleName);
+    if (doc.isNull()) {
+        request->send(404, "application/json", "{\"error\":\"Module not found\"}");
+        return;
+    }
+
+    String response;
+    serializeJson(doc, response);
+    request->send(200, "application/json", response);
+}

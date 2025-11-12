@@ -29,6 +29,10 @@ public:
     void evaluate(); // Called by PlcEngine
     PlcMemory& getMemory() { return memory; } // Expose PlcMemory for external access
 
+    // Memory management
+    size_t getEstimatedMemoryUsage() const;
+    bool validateMemoryAvailable(size_t requiredBytes) const;
+
 private:
     String _name;
     PlcMemory memory;

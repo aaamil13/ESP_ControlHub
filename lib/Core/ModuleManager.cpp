@@ -644,6 +644,28 @@ JsonDocument ModuleManager::getSystemStatus() const {
     return doc;
 }
 
+JsonDocument ModuleManager::getModuleSummary() const {
+    JsonDocument doc;
+
+    JsonArray modulesArray = doc["modules"].to<JsonArray>();
+
+    for (const auto& pair : modules) {
+        const Module* module = pair.second;
+        JsonObject moduleObj = modulesArray.add<JsonObject>();
+
+        moduleObj["name"] = module->getName();
+        moduleObj["display_name"] = module->getDisplayName();
+        moduleObj["type"] = moduleTypeToString(module->getType());
+        moduleObj["state"] = moduleStateToString(module->getState());
+        moduleObj["status"] = module->getStatusMessage();
+        moduleObj["can_disable"] = module->getCapabilities().canDisable;
+    }
+
+    doc["total"] = modules.size();
+
+    return doc;
+}
+
 JsonDocument ModuleManager::getModuleInfo(const String& moduleName) const {
     JsonDocument doc;
 

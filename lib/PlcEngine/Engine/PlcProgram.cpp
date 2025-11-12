@@ -1,4 +1,5 @@
 #include "../PlcEngine/Engine/PlcProgram.h"
+#include <memory> // For std::make_unique
 #include <StreamLogger.h> // For EspHubLog
 extern StreamLogger* EspHubLog; // Declare EspHubLog
 
@@ -107,83 +108,83 @@ bool PlcProgram::loadConfiguration(const char* jsonConfig) {
             std::unique_ptr<PlcBlock> block;
 
             if (strcmp(type, "AND") == 0) {
-                block = std::make_unique<BlockAND>();
+                block = std::unique_ptr<PlcBlock>(new BlockAND());
             } else if (strcmp(type, "OR") == 0) {
-                block = std::make_unique<BlockOR>();
+                block = std::unique_ptr<PlcBlock>(new BlockOR());
             } else if (strcmp(type, "NOT") == 0) {
-                block = std::make_unique<BlockNOT>();
+                block = std::unique_ptr<PlcBlock>(new BlockNOT());
             } else if (strcmp(type, "XOR") == 0) {
-                block = std::make_unique<BlockXOR>();
+                block = std::unique_ptr<PlcBlock>(new BlockXOR());
             } else if (strcmp(type, "NAND") == 0) {
-                block = std::make_unique<BlockNAND>();
+                block = std::unique_ptr<PlcBlock>(new BlockNAND());
             } else if (strcmp(type, "NOR") == 0) {
-                block = std::make_unique<BlockNOR>();
+                block = std::unique_ptr<PlcBlock>(new BlockNOR());
             } else if (strcmp(type, "SR") == 0) {
-                block = std::make_unique<BlockSR>();
+                block = std::unique_ptr<PlcBlock>(new BlockSR());
             } else if (strcmp(type, "RS") == 0) {
-                block = std::make_unique<BlockRS>();
+                block = std::unique_ptr<PlcBlock>(new BlockRS());
             } else if (strcmp(type, "TON") == 0) {
-                block = std::make_unique<BlockTON>();
+                block = std::unique_ptr<PlcBlock>(new BlockTON());
             } else if (strcmp(type, "TOF") == 0) {
-                block = std::make_unique<BlockTOF>();
+                block = std::unique_ptr<PlcBlock>(new BlockTOF());
             } else if (strcmp(type, "TP") == 0) {
-                block = std::make_unique<BlockTP>();
+                block = std::unique_ptr<PlcBlock>(new BlockTP());
             } else if (strcmp(type, "CTU") == 0) {
-                block = std::make_unique<BlockCTU>();
+                block = std::unique_ptr<PlcBlock>(new BlockCTU());
             } else if (strcmp(type, "CTD") == 0) {
-                block = std::make_unique<BlockCTD>();
+                block = std::unique_ptr<PlcBlock>(new BlockCTD());
             } else if (strcmp(type, "CTUD") == 0) {
-                block = std::make_unique<BlockCTUD>();
+                block = std::unique_ptr<PlcBlock>(new BlockCTUD());
             } else if (strcmp(type, "ADD") == 0) {
-                block = std::make_unique<BlockADD>();
+                block = std::unique_ptr<PlcBlock>(new BlockADD());
             } else if (strcmp(type, "SUB") == 0) {
-                block = std::make_unique<BlockSUB>();
+                block = std::unique_ptr<PlcBlock>(new BlockSUB());
             } else if (strcmp(type, "MUL") == 0) {
-                block = std::make_unique<BlockMUL>();
+                block = std::unique_ptr<PlcBlock>(new BlockMUL());
             } else if (strcmp(type, "DIV") == 0) {
-                block = std::make_unique<BlockDIV>();
+                block = std::unique_ptr<PlcBlock>(new BlockDIV());
             } else if (strcmp(type, "MOD") == 0) {
-                block = std::make_unique<BlockMOD>();
+                block = std::unique_ptr<PlcBlock>(new BlockMOD());
             } else if (strcmp(type, "ABS") == 0) {
-                block = std::make_unique<BlockABS>();
+                block = std::unique_ptr<PlcBlock>(new BlockABS());
             } else if (strcmp(type, "SQRT") == 0) {
-                block = std::make_unique<BlockSQRT>();
+                block = std::unique_ptr<PlcBlock>(new BlockSQRT());
             } else if (strcmp(type, "INC") == 0) {
-                block = std::make_unique<BlockINC>();
+                block = std::unique_ptr<PlcBlock>(new BlockINC());
             } else if (strcmp(type, "DEC") == 0) {
-                block = std::make_unique<BlockDEC>();
+                block = std::unique_ptr<PlcBlock>(new BlockDEC());
             } else if (strcmp(type, "GT") == 0) {
-                block = std::make_unique<BlockGT>();
+                block = std::unique_ptr<PlcBlock>(new BlockGT());
             } else if (strcmp(type, "EQ") == 0) {
-                block = std::make_unique<BlockEQ>();
+                block = std::unique_ptr<PlcBlock>(new BlockEQ());
             } else if (strcmp(type, "NE") == 0) {
-                block = std::make_unique<BlockNE>();
+                block = std::unique_ptr<PlcBlock>(new BlockNE());
             } else if (strcmp(type, "LT") == 0) {
-                block = std::make_unique<BlockLT>();
+                block = std::unique_ptr<PlcBlock>(new BlockLT());
             } else if (strcmp(type, "GE") == 0) {
-                block = std::make_unique<BlockGE>();
+                block = std::unique_ptr<PlcBlock>(new BlockGE());
             } else if (strcmp(type, "LE") == 0) {
-                block = std::make_unique<BlockLE>();
+                block = std::unique_ptr<PlcBlock>(new BlockLE());
             } else if (strcmp(type, "TIME_COMPARE") == 0) {
-                block = std::make_unique<BlockTimeCompare>(_timeManager);
+                block = std::unique_ptr<PlcBlock>(new BlockTimeCompare(_timeManager));
             } else if (strcmp(type, "BOOL_ARRAY_TO_INT8") == 0) {
-                block = std::make_unique<BlockBoolArrayToInt8>();
+                block = std::unique_ptr<PlcBlock>(new BlockBoolArrayToInt8());
             } else if (strcmp(type, "INT8_TO_INT16") == 0) {
-                block = std::make_unique<BlockInt8ToInt16>();
+                block = std::unique_ptr<PlcBlock>(new BlockInt8ToInt16());
             } else if (strcmp(type, "INT8_TO_UINT8") == 0) {
-                block = std::make_unique<BlockInt8ToUint8>();
+                block = std::unique_ptr<PlcBlock>(new BlockInt8ToUint8());
             } else if (strcmp(type, "INT16_TO_UINT16") == 0) {
-                block = std::make_unique<BlockInt16ToUint16>();
+                block = std::unique_ptr<PlcBlock>(new BlockInt16ToUint16());
             } else if (strcmp(type, "INT32_TO_TIME") == 0) {
-                block = std::make_unique<BlockInt32ToTime>();
+                block = std::unique_ptr<PlcBlock>(new BlockInt32ToTime());
             } else if (strcmp(type, "INT16_TO_FLOAT") == 0) {
-                block = std::make_unique<BlockInt16ToFloat>();
+                block = std::unique_ptr<PlcBlock>(new BlockInt16ToFloat());
             } else if (strcmp(type, "INT32_TO_DOUBLE") == 0) {
-                block = std::make_unique<BlockInt32ToDouble>();
+                block = std::unique_ptr<PlcBlock>(new BlockInt32ToDouble());
             } else if (strcmp(type, "SEQUENCER") == 0) {
-                block = std::make_unique<BlockSequencer>();
+                block = std::unique_ptr<PlcBlock>(new BlockSequencer());
             } else if (strcmp(type, "StatusHandler") == 0) {
-                block = std::make_unique<BlockStatusHandler>();
+                block = std::unique_ptr<PlcBlock>(new BlockStatusHandler());
             }
             // Add other block types here with else if
 
@@ -266,4 +267,39 @@ void PlcProgram::executeInitBlock() {
             }
         }
     }
+}
+
+// Memory management
+size_t PlcProgram::getEstimatedMemoryUsage() const {
+    size_t total = 0;
+
+    // Memory for this object
+    total += sizeof(PlcProgram);
+
+    // Memory for the program name
+    total += _name.length();
+
+    // Memory for blocks (estimate ~200 bytes per block)
+    total += logic_blocks.size() * 200;
+
+    // Memory for JSON config
+    total += config.memoryUsage();
+
+    // Memory for PlcMemory variables
+    total += memory.getMemoryUsage();
+
+    return total;
+}
+
+bool PlcProgram::validateMemoryAvailable(size_t requiredBytes) const {
+    size_t freeHeap = ESP.getFreeHeap();
+    size_t minFreeHeap = 20000; // Keep at least 20KB free
+
+    if (freeHeap < (requiredBytes + minFreeHeap)) {
+        EspHubLog->printf("ERROR: Not enough memory! Required: %u bytes, Free: %u bytes\n",
+                         requiredBytes, freeHeap);
+        return false;
+    }
+
+    return true;
 }

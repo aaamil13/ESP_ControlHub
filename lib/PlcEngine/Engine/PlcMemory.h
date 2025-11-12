@@ -76,6 +76,9 @@ public:
     void syncIOPoints(); // Sync between PLC variables and endpoints
     PlcValue getValueAsPlcValue(const std::string& name); // Get value as PlcValue struct
 
+    // Memory usage
+    size_t getMemoryUsage() const;
+
 private:
     std::map<std::string, PlcVariable> memoryMap;
     DeviceRegistry* deviceRegistry;

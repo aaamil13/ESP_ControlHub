@@ -2,7 +2,9 @@
 #define STREAM_LOGGER_H
 
 #include <Arduino.h>
-#include "../UI/WebManager.h"
+
+// Forward declaration to avoid circular dependency
+class WebManager;
 
 class StreamLogger : public Print {
 public:

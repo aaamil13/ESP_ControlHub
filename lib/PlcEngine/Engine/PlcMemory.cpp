@@ -361,3 +361,24 @@ void PlcMemory::syncIOPoints() {
         }
     }
 }
+
+size_t PlcMemory::getMemoryUsage() const {
+    size_t total = 0;
+
+    // Memory for the map structure itself
+    total += sizeof(memoryMap);
+
+    // Memory for each variable
+    for (const auto& pair : memoryMap) {
+        // Memory for the key (variable name)
+        total += pair.first.length();
+
+        // Memory for the PlcVariable struct
+        total += sizeof(PlcVariable);
+
+        // Additional memory for mesh_link string
+        total += pair.second.mesh_link.length();
+    }
+
+    return total;
+}
