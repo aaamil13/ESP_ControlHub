@@ -1,0 +1,163 @@
+{
+  "program_name": "temperature_control_example",
+  "description": "Temperature control with hysteresis and safety features",
+  "author": "EspHub",
+  "version": "1.0.0",
+
+  "memory": {
+    "temp_sensor": {
+      "type": "real",
+      "initial_value": 20.0,
+      "description": "Current temperature reading"
+    },
+    "setpoint": {
+      "type": "real",
+      "initial_value": 22.0,
+      "retentive": true,
+      "description": "Desired temperature"
+    },
+    "hysteresis": {
+      "type": "real",
+      "initial_value": 0.5,
+      "retentive": true,
+      "description": "Temperature hysteresis"
+    },
+    "heater_enabled": {
+      "type": "bool",
+      "initial_value": false,
+      "description": "Heater control output"
+    },
+    "sensor_online": {
+      "type": "bool",
+      "initial_value": false,
+      "description": "Temperature sensor status"
+    },
+    "high_temp_alarm": {
+      "type": "bool",
+      "initial_value": false,
+      "description": "High temperature alarm"
+    },
+    "temp_too_high": {
+      "type": "bool",
+      "initial_value": false,
+      "description": "Temperature above setpoint + hysteresis"
+    },
+    "temp_too_low": {
+      "type": "bool",
+      "initial_value": false,
+      "description": "Temperature below setpoint - hysteresis"
+    },
+    "upper_limit": {
+      "type": "real",
+      "initial_value": 0.0,
+      "description": "Calculated upper limit"
+    },
+    "lower_limit": {
+      "type": "real",
+      "initial_value": 0.0,
+      "description": "Calculated lower limit"
+    }
+  },
+
+  "io_points": [
+    {
+      "plc_var": "temp_sensor",
+      "endpoint": "kitchen.zigbee.temp_sensor.temperature.real",
+      "direction": "input",
+      "auto_sync": true,
+      "description": "Temperature sensor value"
+    },
+    {
+      "plc_var": "sensor_online",
+      "endpoint": "kitchen.zigbee.temp_sensor.online.bool",
+      "direction": "input",
+      "auto_sync": true,
+      "description": "Temperature sensor online status"
+    },
+    {
+      "plc_var": "heater_enabled",
+      "endpoint": "kitchen.zigbee.heater.state.bool",
+      "direction": "output",
+      "auto_sync": true,
+      "description": "Heater control"
+    }
+  ],
+
+  "init": [
+    {
+      "action": "set_value",
+      "variable": "heater_enabled",
+      "value": false,
+      "comment": "Ensure heater is off at startup"
+    }
+  ],
+
+  "logic": [
+    {
+      "comment": "Calculate upper temperature limit (setpoint + hysteresis)",
+      "block_type": "ADD",
+      "inputs": {
+        "in1": "setpoint",
+        "in2": "hysteresis"
+      },
+      "outputs": {
+        "out": "upper_limit"
+      }
+    },
+    {
+      "comment": "Calculate lower temperature limit (setpoint - hysteresis)",
+      "block_type": "SUB",
+      "inputs": {
+        "in1": "setpoint",
+        "in2": "hysteresis"
+      },
+      "outputs": {
+        "out": "lower_limit"
+      }
+    },
+    {
+      "comment": "Check if temperature is too high (above setpoint + hysteresis)",
+      "block_type": "GT",
+      "inputs": {
+        "in1": "temp_sensor",
+        "in2": "upper_limit"
+      },
+      "outputs": {
+        "out": "temp_too_high"
+      }
+    },
+    {
+      "comment": "Check if temperature is too low (below setpoint - hysteresis)",
+      "block_type": "LT",
+      "inputs": {
+        "in1": "temp_sensor",
+        "in2": "lower_limit"
+      },
+      "outputs": {
+        "out": "temp_too_low"
+      }
+    },
+    {
+      "comment": "Enable heater if temperature is too low AND sensor is online",
+      "block_type": "AND",
+      "inputs": {
+        "in1": "temp_too_low",
+        "in2": "sensor_online"
+      },
+      "outputs": {
+        "out": "heater_enabled"
+      }
+    },
+    {
+      "comment": "High temperature alarm (above 30°C)",
+      "block_type": "GT",
+      "inputs": {
+        "in1": "temp_sensor",
+        "in2": 30.0
+      },
+      "outputs": {
+        "out": "high_temp_alarm"
+      }
+    }
+  ]
+}
