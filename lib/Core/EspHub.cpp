@@ -30,7 +30,16 @@ void EspHub::begin() {
     webManager.begin();
     plcEngine.begin();
     appManager.begin(plcEngine, webManager.getServer()); // Pass webManager's server
-    meshDeviceManager.begin(); // Initialize MeshDeviceManager
+
+    // Initialize MeshDeviceManager with device name and zone
+    // Generate device name from MAC address
+    uint8_t mac[6];
+    WiFi.macAddress(mac);
+    char deviceName[32];
+    snprintf(deviceName, sizeof(deviceName), "esphub_%02X%02X%02X", mac[3], mac[4], mac[5]);
+    String zoneName = "main"; // Default zone, can be configured later
+    meshDeviceManager.begin(String(deviceName), zoneName);
+
     userManager.begin(); // Initialize UserManager
     otaManager.begin(); // Initialize OtaManager
 
