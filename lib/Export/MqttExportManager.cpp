@@ -7,6 +7,7 @@ MqttExportManager::MqttExportManager()
     : mqttManager(nullptr),
       variableRegistry(nullptr),
       plcEngine(nullptr),
+      deviceRegistry(nullptr),
       plcCommandHandler(nullptr) {
     memset(&stats, 0, sizeof(stats));
 }
@@ -256,6 +257,12 @@ bool MqttExportManager::addExportRule(const String& varName, const String& mqttT
 }
 
 bool MqttExportManager::configureExportRule(const String& varName, const ExportRule& rule) {
+    // Check if this variable is a PLC-controlled output
+    if (isPlcControlledOutput(varName)) {
+        LOG_ERROR("MqttExportManager", "Cannot export PLC-controlled output: " + varName);
+        return false;
+    }
+
     exportRules[varName] = rule;
 
     // Subscribe to MQTT topic if writable
@@ -547,9 +554,32 @@ void MqttExportManager::setPlcEngine(PlcEngine* engine) {
     plcEngine = engine;
 }
 
+void MqttExportManager::setDeviceRegistry(DeviceRegistry* registry) {
+    deviceRegistry = registry;
+}
+
 // ============================================================================
 // Private Helper Methods
 // ============================================================================
+
+bool MqttExportManager::isPlcControlledOutput(const String& varName) {
+    if (!deviceRegistry) {
+        return false; // No device registry, can't check
+    }
+
+    // Check all IO points to see if this variable is registered as an OUTPUT
+    auto allIOPoints = deviceRegistry->getAllIOPoints();
+    for (PlcIOPoint* ioPoint : allIOPoints) {
+        if (ioPoint &&
+            ioPoint->plcVarName == varName &&
+            ioPoint->direction == IODirection::IO_OUTPUT &&
+            !ioPoint->ownerProgram.isEmpty()) {
+            // This variable is a PLC-controlled output
+            return true;
+        }
+    }
+    return false;
+}
 
 bool MqttExportManager::validateValue(const ExportRule& rule, const PlcValue& value) {
     if (!rule.validation.enabled) {

@@ -1,5 +1,6 @@
 #include "../PlcEngine/Engine/PlcEngine.h"
 #include <StreamLogger.h>
+#include "../Devices/DeviceRegistry.h" // For IODirection enum
 
 extern StreamLogger* EspHubLog;
 
@@ -153,8 +154,32 @@ std::vector<String> PlcEngine::getProgramNames() const {
 }
 
 void PlcEngine::evaluateAllPrograms() {
+    // PHASE 1: READ - Sync all INPUTS from devices to PLC memory
+    // This reads the current state of all input devices into PLC variables
+    IODirection inputDirection = IODirection::IO_INPUT;
     for (auto& pair : programs) {
-        pair.second->evaluate();
+        if (pair.second->getState() == PlcProgramState::RUNNING) {
+            PlcMemory& memory = pair.second->getMemory();
+            memory.syncIOPoints(&inputDirection);
+        }
+    }
+
+    // PHASE 2: EXECUTE - Run program logic
+    // Process all PLC program logic with the freshly read inputs
+    for (auto& pair : programs) {
+        if (pair.second->getState() == PlcProgramState::RUNNING) {
+            pair.second->evaluate();
+        }
+    }
+
+    // PHASE 3: WRITE - Sync all OUTPUTS from PLC memory to devices
+    // This writes the calculated output values to physical devices
+    IODirection outputDirection = IODirection::IO_OUTPUT;
+    for (auto& pair : programs) {
+        if (pair.second->getState() == PlcProgramState::RUNNING) {
+            PlcMemory& memory = pair.second->getMemory();
+            memory.syncIOPoints(&outputDirection);
+        }
     }
 }
 

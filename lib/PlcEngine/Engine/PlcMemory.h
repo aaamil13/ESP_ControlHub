@@ -68,12 +68,13 @@ public:
     // IO Point Management - Integration with DeviceRegistry
     void setDeviceRegistry(DeviceRegistry* registry);
     bool registerIOPoint(const std::string& plcVarName, const std::string& endpointName,
-                        IODirection direction, bool requiresFunction = false,
-                        const std::string& functionName = "", bool autoSync = true);
+                        IODirection direction, const std::string& ownerProgram,
+                        bool requiresFunction = false, const std::string& functionName = "",
+                        bool autoSync = true);
     bool unregisterIOPoint(const std::string& plcVarName);
     PlcIOPoint* getIOPoint(const std::string& plcVarName);
     bool isEndpointOnline(const std::string& endpointName);
-    void syncIOPoints(); // Sync between PLC variables and endpoints
+    void syncIOPoints(IODirection* filterDirection = nullptr); // Sync between PLC variables and endpoints (optionally filter by direction)
     PlcValue getValueAsPlcValue(const std::string& name); // Get value as PlcValue struct
 
     // Memory usage

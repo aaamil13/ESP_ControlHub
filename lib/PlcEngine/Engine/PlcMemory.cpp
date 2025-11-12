@@ -240,8 +240,9 @@ void PlcMemory::setDeviceRegistry(DeviceRegistry* registry) {
 }
 
 bool PlcMemory::registerIOPoint(const std::string& plcVarName, const std::string& endpointName,
-                                IODirection direction, bool requiresFunction,
-                                const std::string& functionName, bool autoSync) {
+                                IODirection direction, const std::string& ownerProgram,
+                                bool requiresFunction, const std::string& functionName,
+                                bool autoSync) {
     if (!deviceRegistry) {
         EspHubLog->println("ERROR: DeviceRegistry not set in PlcMemory");
         return false;
@@ -253,6 +254,27 @@ bool PlcMemory::registerIOPoint(const std::string& plcVarName, const std::string
         return false;
     }
 
+    // For OUTPUT direction, check if endpoint is already owned by another program
+    if (direction == IODirection::IO_OUTPUT) {
+        // Check all existing IO points
+        auto allIOPoints = deviceRegistry->getAllIOPoints();
+        for (PlcIOPoint* existingPoint : allIOPoints) {
+            if (existingPoint &&
+                existingPoint->mappedEndpoint == String(endpointName.c_str()) &&
+                existingPoint->direction == IODirection::IO_OUTPUT) {
+
+                // Check if owned by a different program
+                if (!existingPoint->ownerProgram.isEmpty() &&
+                    existingPoint->ownerProgram != String(ownerProgram.c_str())) {
+                    EspHubLog->printf("ERROR: Output endpoint '%s' already owned by program '%s'\n",
+                                     endpointName.c_str(),
+                                     existingPoint->ownerProgram.c_str());
+                    return false;
+                }
+            }
+        }
+    }
+
     // Create IO point structure
     PlcIOPoint ioPoint;
     ioPoint.plcVarName = String(plcVarName.c_str());
@@ -261,14 +283,16 @@ bool PlcMemory::registerIOPoint(const std::string& plcVarName, const std::string
     ioPoint.requiresFunction = requiresFunction;
     ioPoint.functionName = String(functionName.c_str());
     ioPoint.autoSync = autoSync;
+    ioPoint.ownerProgram = String(ownerProgram.c_str());
 
     // Register with DeviceRegistry
     bool result = deviceRegistry->registerIOPoint(ioPoint);
     if (result) {
-        EspHubLog->printf("Registered IO point: %s <-> %s (%s)\n",
+        EspHubLog->printf("Registered IO point: %s <-> %s (%s, owner: %s)\n",
                          plcVarName.c_str(),
                          endpointName.c_str(),
-                         (direction == IODirection::IO_INPUT) ? "INPUT" : "OUTPUT");
+                         (direction == IODirection::IO_INPUT) ? "INPUT" : "OUTPUT",
+                         ownerProgram.c_str());
     }
     return result;
 }
@@ -307,7 +331,7 @@ PlcValue PlcMemory::getValueAsPlcValue(const std::string& name) {
     return result;
 }
 
-void PlcMemory::syncIOPoints() {
+void PlcMemory::syncIOPoints(IODirection* filterDirection) {
     if (!deviceRegistry) {
         return;
     }
@@ -316,6 +340,11 @@ void PlcMemory::syncIOPoints() {
 
     for (PlcIOPoint* ioPoint : allIOPoints) {
         if (!ioPoint || !ioPoint->autoSync) {
+            continue;
+        }
+
+        // Filter by direction if specified
+        if (filterDirection && ioPoint->direction != *filterDirection) {
             continue;
         }
 

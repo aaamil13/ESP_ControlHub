@@ -70,11 +70,13 @@ struct PlcIOPoint {
     bool requiresFunction;     // For outputs - requires function call
     String functionName;       // Required function for this output
     bool autoSync;             // Auto-sync with endpoint
+    String ownerProgram;       // Name of PLC program that owns this IO point (for output ownership tracking)
 
     PlcIOPoint() :
         direction(IODirection::IO_INPUT),
         requiresFunction(false),
-        autoSync(true) {}
+        autoSync(true),
+        ownerProgram("") {}
 };
 
 // Forward declaration

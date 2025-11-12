@@ -9,6 +9,7 @@
 #include "../Protocols/Mqtt/MqttManager.h"
 #include "../Export/VariableRegistry.h"
 #include "../PlcEngine/Engine/PlcEngine.h"
+#include "../Devices/DeviceRegistry.h"
 
 /**
  * MqttExportManager - Hybrid MQTT variable and command export
@@ -274,12 +275,14 @@ public:
     void setMqttManager(MqttManager* manager);
     void setVariableRegistry(VariableRegistry* registry);
     void setPlcEngine(PlcEngine* engine);
+    void setDeviceRegistry(DeviceRegistry* registry);
 
 private:
     // Integration references
     MqttManager* mqttManager;
     VariableRegistry* variableRegistry;
     PlcEngine* plcEngine;
+    DeviceRegistry* deviceRegistry;
 
     // Export rules and command definitions
     std::map<String, ExportRule> exportRules;        // varName -> rule
@@ -302,6 +305,7 @@ private:
     String valueToMqttPayload(const PlcValue& value);
     bool mqttPayloadToValue(const String& payload, PlcValueType type, PlcValue& value);
     bool shouldPublish(const ExportRule& rule, const PlcValue& currentValue);
+    bool isPlcControlledOutput(const String& varName); // Check if variable is a PLC output
 
     // Variable change callback
     static void onVariableChanged(const String& varName, const PlcValue& oldValue,
