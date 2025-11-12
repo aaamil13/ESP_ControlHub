@@ -15,7 +15,7 @@ ModuleManager::~ModuleManager() {
 
 bool ModuleManager::initialize() {
     // Load configuration from file
-    loadConfiguration();
+    // loadConfiguration();
 
     return true;
 }
@@ -33,20 +33,20 @@ bool ModuleManager::startAll() {
         // Check if module should be started
         if (!isModuleEnabled(moduleName)) {
             // logger->log(LogLevel::DEBUG, "ModuleManager",
-                       String("Skipping disabled module: ") + moduleName);
+                       // String("Skipping disabled module: ") + moduleName);
             continue;
         }
 
         if (!isModuleAutoStart(moduleName)) {
             // logger->log(LogLevel::DEBUG, "ModuleManager",
-                       String("Skipping non-autostart module: ") + moduleName);
+                       // String("Skipping non-autostart module: ") + moduleName);
             continue;
         }
 
         // Check hardware compatibility
         if (!module->isHardwareCompatible()) {
             // logger->log(LogLevel::WARNING, "ModuleManager",
-                       String("Module ") + moduleName + " not compatible with hardware");
+                       // String("Module ") + moduleName + " not compatible with hardware");
             continue;
         }
 
@@ -59,7 +59,7 @@ bool ModuleManager::startAll() {
                 missingStr += missing[i];
             }
             // logger->log(LogLevel::ERROR, "ModuleManager",
-                       String("Module ") + moduleName + " missing dependencies: " + missingStr);
+                       // String("Module ") + moduleName + " missing dependencies: " + missingStr);
             failed++;
             continue;
         }
@@ -71,13 +71,13 @@ bool ModuleManager::startAll() {
         } else {
             failed++;
             // logger->log(LogLevel::ERROR, "ModuleManager",
-                       String("Failed to start module: ") + moduleName);
+                       // String("Failed to start module: ") + moduleName);
         }
     }
 
     // logger->log(LogLevel::INFO, "ModuleManager",
-               String("Started ") + String(started) + " modules, " +
-               String(failed) + " failed");
+               // String("Started ") + String(started) + " modules, " +
+               // String(failed) + " failed");
 
     return failed == 0;
 }
@@ -118,7 +118,7 @@ bool ModuleManager::registerModule(Module* module) {
 
     if (modules.find(moduleName) != modules.end()) {
         // logger->log(LogLevel::WARNING, "ModuleManager",
-                   String("Module already registered: ") + moduleName);
+                   // String("Module already registered: ") + moduleName);
         return false;
     }
 
@@ -135,8 +135,8 @@ bool ModuleManager::registerModule(Module* module) {
     }
 
     // logger->log(LogLevel::INFO, "ModuleManager",
-               String("Registered module: ") + moduleName +
-               " (" + moduleTypeToString(module->getType()) + ")");
+               // String("Registered module: ") + moduleName +
+               // " (" + moduleTypeToString(module->getType()) + ")");
 
     return true;
 }
@@ -155,7 +155,7 @@ bool ModuleManager::unregisterModule(const String& moduleName) {
 
     modules.erase(it);
     // logger->log(LogLevel::INFO, "ModuleManager",
-               String("Unregistered module: ") + moduleName);
+               // String("Unregistered module: ") + moduleName);
 
     return true;
 }
@@ -212,7 +212,7 @@ bool ModuleManager::enableModule(const String& moduleName, bool saveConfig) {
     Module* module = getModule(moduleName);
     if (!module) {
         // logger->log(LogLevel::ERROR, "ModuleManager",
-                   String("Module not found: ") + moduleName);
+                   // String("Module not found: ") + moduleName);
         return false;
     }
 
@@ -220,8 +220,8 @@ bool ModuleManager::enableModule(const String& moduleName, bool saveConfig) {
     if (!module->isHardwareCompatible()) {
         ModuleCapabilities caps = module->getCapabilities();
         // logger->log(LogLevel::ERROR, "ModuleManager",
-                   String("Module ") + moduleName +
-                   " requires hardware: " + caps.hardwareRequirement);
+                   // String("Module ") + moduleName +
+                   // " requires hardware: " + caps.hardwareRequirement);
         return false;
     }
 
@@ -234,8 +234,8 @@ bool ModuleManager::enableModule(const String& moduleName, bool saveConfig) {
             missingStr += missing[i];
         }
         // logger->log(LogLevel::ERROR, "ModuleManager",
-                   String("Cannot enable ") + moduleName +
-                   ", missing dependencies: " + missingStr);
+                   // String("Cannot enable ") + moduleName +
+                   // ", missing dependencies: " + missingStr);
         return false;
     }
 
@@ -258,7 +258,7 @@ bool ModuleManager::disableModule(const String& moduleName, bool saveConfig) {
     Module* module = getModule(moduleName);
     if (!module) {
         // logger->log(LogLevel::ERROR, "ModuleManager",
-                   String("Module not found: ") + moduleName);
+                   // String("Module not found: ") + moduleName);
         return false;
     }
 
@@ -266,7 +266,7 @@ bool ModuleManager::disableModule(const String& moduleName, bool saveConfig) {
     ModuleCapabilities caps = module->getCapabilities();
     if (!caps.canDisable) {
         // logger->log(LogLevel::ERROR, "ModuleManager",
-                   String("Module ") + moduleName + " cannot be disabled");
+                   // String("Module ") + moduleName + " cannot be disabled");
         return false;
     }
 
@@ -279,8 +279,8 @@ bool ModuleManager::disableModule(const String& moduleName, bool saveConfig) {
             dependentStr += dependents[i];
         }
         // logger->log(LogLevel::ERROR, "ModuleManager",
-                   String("Cannot disable ") + moduleName +
-                   ", required by: " + dependentStr);
+                   // String("Cannot disable ") + moduleName +
+                   // ", required by: " + dependentStr);
         return false;
     }
 
@@ -306,7 +306,7 @@ bool ModuleManager::restartModule(const String& moduleName) {
     }
 
     // logger->log(LogLevel::INFO, "ModuleManager",
-               String("Restarting module: ") + moduleName);
+               // String("Restarting module: ") + moduleName);
 
     bool wasRunning = module->isRunning();
 
@@ -343,14 +343,14 @@ ModuleState ModuleManager::getModuleState(const String& moduleName) const {
 bool ModuleManager::loadConfiguration(const String& configPath) {
     if (!LittleFS.exists(configPath)) {
         // logger->log(LogLevel::WARNING, "ModuleManager",
-                   String("Config file not found: ") + configPath);
+                   // String("Config file not found: ") + configPath);
         return false;
     }
 
     File file = LittleFS.open(configPath, "r");
     if (!file) {
         // logger->log(LogLevel::ERROR, "ModuleManager",
-                   String("Failed to open config: ") + configPath);
+                   // String("Failed to open config: ") + configPath);
         return false;
     }
 
@@ -360,7 +360,7 @@ bool ModuleManager::loadConfiguration(const String& configPath) {
 
     if (error) {
         // logger->log(LogLevel::ERROR, "ModuleManager",
-                   String("Failed to parse config: ") + error.c_str());
+                   // String("Failed to parse config: ") + error.c_str());
         return false;
     }
 
@@ -442,7 +442,7 @@ bool ModuleManager::saveConfiguration(const String& configPath) {
     File file = LittleFS.open(configPath, "w");
     if (!file) {
         // logger->log(LogLevel::ERROR, "ModuleManager",
-                   String("Failed to create config file: ") + configPath);
+                   // String("Failed to create config file: ") + configPath);
         return false;
     }
 
@@ -482,7 +482,7 @@ bool ModuleManager::isModuleAutoStart(const String& moduleName) const {
 // ============================================================================
 
 bool ModuleManager::checkDependencies(const String& moduleName) const {
-    Module* module = getModule(moduleName);
+    const Module* module = getModule(moduleName);
     if (!module) {
         return false;
     }
@@ -490,7 +490,7 @@ bool ModuleManager::checkDependencies(const String& moduleName) const {
     ModuleCapabilities caps = module->getCapabilities();
     for (String& dependency : caps.dependencies) {
         // Check if dependency is registered
-        Module* depModule = getModule(dependency);
+        const Module* depModule = getModule(dependency);
         if (!depModule) {
             return false;  // Dependency not registered
         }
@@ -509,7 +509,7 @@ std::vector<String> ModuleManager::getDependentModules(const String& moduleName)
 
     // Find all modules that depend on this module
     for (auto& pair : modules) {
-        Module* module = pair.second;
+        const Module* module = pair.second;
         ModuleCapabilities caps = module->getCapabilities();
 
         for (String& dependency : caps.dependencies) {
@@ -529,14 +529,14 @@ std::vector<String> ModuleManager::getDependentModules(const String& moduleName)
 std::vector<String> ModuleManager::getMissingDependencies(const String& moduleName) const {
     std::vector<String> missing;
 
-    Module* module = getModule(moduleName);
+    const Module* module = getModule(moduleName);
     if (!module) {
         return missing;
     }
 
     ModuleCapabilities caps = module->getCapabilities();
     for (String& dependency : caps.dependencies) {
-        Module* depModule = getModule(dependency);
+        const Module* depModule = getModule(dependency);
         if (!depModule || !isModuleEnabled(dependency)) {
             missing.push_back(dependency);
         }
@@ -647,7 +647,7 @@ JsonDocument ModuleManager::getSystemStatus() const {
 JsonDocument ModuleManager::getModuleInfo(const String& moduleName) const {
     JsonDocument doc;
 
-    Module* module = getModule(moduleName);
+    const Module* module = getModule(moduleName);
     if (!module) {
         doc["error"] = "Module not found";
         return doc;
@@ -694,7 +694,7 @@ JsonDocument ModuleManager::getModuleInfo(const String& moduleName) const {
 }
 
 JsonDocument ModuleManager::getModuleStatistics(const String& moduleName) const {
-    Module* module = getModule(moduleName);
+    const Module* module = getModule(moduleName);
     if (!module) {
         JsonDocument doc;
         doc["error"] = "Module not found";
@@ -736,8 +736,8 @@ int ModuleManager::healthCheckAll() {
         if (module->isEnabled() && !module->healthCheck()) {
             unhealthy++;
             // logger->log(LogLevel::WARNING, "ModuleManager",
-                       String("Module unhealthy: ") + module->getName() +
-                       " - " + module->getLastError());
+                       // String("Module unhealthy: ") + module->getName() +
+                       // " - " + module->getLastError());
         }
     }
 
@@ -745,7 +745,7 @@ int ModuleManager::healthCheckAll() {
 }
 
 bool ModuleManager::isModuleHealthy(const String& moduleName) const {
-    Module* module = getModule(moduleName);
+    const Module* module = getModule(moduleName);
     if (!module) {
         return false;
     }
@@ -783,12 +783,12 @@ bool ModuleManager::initializeModule(Module* module) {
     }
 
     // logger->log(LogLevel::INFO, "ModuleManager",
-               String("Initializing module: ") + moduleName);
+               // String("Initializing module: ") + moduleName);
 
     if (!module->initialize()) {
         // logger->log(LogLevel::ERROR, "ModuleManager",
-                   String("Failed to initialize module: ") + moduleName +
-                   " - " + module->getLastError());
+                   // String("Failed to initialize module: ") + moduleName +
+                   // " - " + module->getLastError());
         return false;
     }
 
@@ -808,17 +808,17 @@ bool ModuleManager::startModule(Module* module) {
     }
 
     // logger->log(LogLevel::INFO, "ModuleManager",
-               String("Starting module: ") + moduleName);
+               // String("Starting module: ") + moduleName);
 
     if (!module->start()) {
         // logger->log(LogLevel::ERROR, "ModuleManager",
-                   String("Failed to start module: ") + moduleName +
-                   " - " + module->getLastError());
+                   // String("Failed to start module: ") + moduleName +
+                   // " - " + module->getLastError());
         return false;
     }
 
     // logger->log(LogLevel::INFO, "ModuleManager",
-               String("Module started: ") + moduleName);
+               // String("Module started: ") + moduleName);
 
     return true;
 }
@@ -836,17 +836,17 @@ bool ModuleManager::stopModule(Module* module) {
     }
 
     // logger->log(LogLevel::INFO, "ModuleManager",
-               String("Stopping module: ") + moduleName);
+               // String("Stopping module: ") + moduleName);
 
     if (!module->stop()) {
         // logger->log(LogLevel::ERROR, "ModuleManager",
-                   String("Failed to stop module: ") + moduleName +
-                   " - " + module->getLastError());
+                   // String("Failed to stop module: ") + moduleName +
+                   // " - " + module->getLastError());
         return false;
     }
 
     // logger->log(LogLevel::INFO, "ModuleManager",
-               String("Module stopped: ") + moduleName);
+               // String("Module stopped: ") + moduleName);
 
     return true;
 }

@@ -14,7 +14,7 @@ extern StreamLogger* EspHubLog;
 WebManager* WebManager::instance = nullptr;
 
 WebManager::WebManager(PlcEngine* plcEngine, MeshDeviceManager* meshDeviceManager, ZigbeeManager* zigbeeManager)
-    : server(80), ws("/ws"), _plcEngine(plcEngine), _meshDeviceManager(meshDeviceManager), _zigbeeManager(zigbeeManager) {
+    : server(80), ws("/ws"), _plcEngine(plcEngine), _meshDeviceManager(meshDeviceManager), _zigbeeManager(zigbeeManager), _moduleManager(nullptr) {
     instance = this;
 }
 
@@ -93,6 +93,9 @@ void WebManager::begin() {
     });
 
     server.serveStatic("/", LITTLEFS, "/");
+
+    // Setup Module Management API
+    setupModuleAPI();
 
     // TODO: Add AsyncElegantOTA library for OTA updates
     // AsyncElegantOTA.begin(&server);    // Start ElegantOTA
