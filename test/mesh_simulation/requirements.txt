@@ -1,0 +1,23 @@
+# Mesh Network Simulation Requirements
+# Python 3.8+
+
+# Discrete-event simulation framework
+simpy>=4.0.1
+
+# Network graph manipulation and analysis
+networkx>=3.0
+
+# Data analysis and manipulation
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Optional: For interactive notebooks
+jupyter>=1.0.0
+ipython>=8.0.0
+
+# Testing (optional)
+pytest>=7.0.0

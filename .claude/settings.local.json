@@ -14,7 +14,8 @@
       "Bash(python:*)",
       "Bash(taskkill:*)",
       "Bash(nul)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(venvScriptspython.exe -m pip install --upgrade pip)"
     ],
     "deny": [],
     "ask": []
