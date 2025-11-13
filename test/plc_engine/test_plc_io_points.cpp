@@ -1,34 +1,35 @@
 #include <Arduino.h>
-#include <PlcMemory.h>
-#include <DeviceRegistry.h>
+#include "../../lib/PlcEngine/Engine/PlcMemory.h"
+#include "../../lib/Devices/DeviceRegistry.h"
+#include "../../lib/LocalIO/LocalIOTypes.h" // For IODirection
+#include <unity.h>
 
-// Simple test framework
-int tests_passed = 0;
-int tests_failed = 0;
+// Global instance of DeviceRegistry and PlcMemory for testing
+// Note: PlcMemory needs a DeviceRegistry instance to function with IO points
+DeviceRegistry& registry = DeviceRegistry::getInstance();
+PlcMemory memory; // Global instance for tests
 
-#define TEST_ASSERT(condition, message) \
-    if (condition) { \
-        tests_passed++; \
-        Serial.printf("[PASS] %s\n", message); \
-    } else { \
-        tests_failed++; \
-        Serial.printf("[FAIL] %s\n", message); \
-    }
+void setUp(void) {
+    // set up runs before each test
+    registry.clear(); // Clear registry before each test
+    memory.clear();   // Clear PLC memory before each test
+    memory.begin();   // Initialize PlcMemory
+    memory.setDeviceRegistry(&registry); // Connect PlcMemory to DeviceRegistry
+}
+
+void tearDown(void) {
+    // tear down runs after each test
+}
 
 void test_plc_memory_basic() {
-    Serial.println("\n=== Test: PlcMemory Basic Operations ===");
-
-    PlcMemory memory;
-    memory.begin();
-
     // Declare variables
     bool declared1 = memory.declareVariable("test_bool", PlcValueType::BOOL);
     bool declared2 = memory.declareVariable("test_int", PlcValueType::INT);
     bool declared3 = memory.declareVariable("test_real", PlcValueType::REAL);
 
-    TEST_ASSERT(declared1, "BOOL variable declared");
-    TEST_ASSERT(declared2, "INT variable declared");
-    TEST_ASSERT(declared3, "REAL variable declared");
+    TEST_ASSERT_TRUE(declared1);
+    TEST_ASSERT_TRUE(declared2);
+    TEST_ASSERT_TRUE(declared3);
 
     // Set values
     memory.setValue<bool>("test_bool", true);
@@ -40,23 +41,12 @@ void test_plc_memory_basic() {
     int16_t intVal = memory.getValue<int16_t>("test_int", 0);
     float realVal = memory.getValue<float>("test_real", 0.0f);
 
-    TEST_ASSERT(boolVal == true, "BOOL value correct");
-    TEST_ASSERT(intVal == 42, "INT value correct");
-    TEST_ASSERT(abs(realVal - 3.14f) < 0.01f, "REAL value correct");
+    TEST_ASSERT_TRUE(boolVal);
+    TEST_ASSERT_EQUAL_INT16(42, intVal);
+    TEST_ASSERT_EQUAL_FLOAT(3.14f, realVal);
 }
 
 void test_io_point_registration() {
-    Serial.println("\n=== Test: IO Point Registration via PlcMemory ===");
-
-    PlcMemory memory;
-    DeviceRegistry& registry = DeviceRegistry::getInstance();
-    registry.clear();
-    memory.clear();
-    memory.begin();
-
-    // Connect PlcMemory to DeviceRegistry
-    memory.setDeviceRegistry(&registry);
-
     // Declare PLC variable
     memory.declareVariable("input_gpio", PlcValueType::BOOL);
 
@@ -75,30 +65,21 @@ void test_io_point_registration() {
         "input_gpio",
         "garage.mesh.node1.gpio.bool",
         IODirection::IO_INPUT,
+        "test_program", // Owner program
         false,
         "",
         true
     );
 
-    TEST_ASSERT(registered, "IO point registered via PlcMemory");
+    TEST_ASSERT_TRUE(registered);
 
     // Verify IO point exists
-    PlcIOPoint* ioPoint = memory.getIOPoint("input_gpio");
-    TEST_ASSERT(ioPoint != nullptr, "IO point can be retrieved");
-    TEST_ASSERT(ioPoint->direction == IODirection::IO_INPUT, "IO point direction correct");
+    PlcIOPoint* ioPoint = registry.getIOPoint("input_gpio"); // Access from registry
+    TEST_ASSERT_NOT_NULL(ioPoint);
+    TEST_ASSERT_EQUAL(IODirection::IO_INPUT, ioPoint->direction);
 }
 
 void test_input_sync() {
-    Serial.println("\n=== Test: INPUT Synchronization ===");
-
-    PlcMemory memory;
-    DeviceRegistry& registry = DeviceRegistry::getInstance();
-    registry.clear();
-    memory.clear();
-    memory.begin();
-
-    memory.setDeviceRegistry(&registry);
-
     // Declare PLC variable for input
     memory.declareVariable("sensor_value", PlcValueType::BOOL);
     memory.setValue<bool>("sensor_value", false); // Initial value
@@ -118,6 +99,7 @@ void test_input_sync() {
         "sensor_value",
         "bedroom.ble.motion.state.bool",
         IODirection::IO_INPUT,
+        "test_program",
         false,
         "",
         true
@@ -128,7 +110,7 @@ void test_input_sync() {
 
     // Check PLC variable was updated from endpoint
     bool plcValue = memory.getValue<bool>("sensor_value", false);
-    TEST_ASSERT(plcValue == true, "INPUT synced from endpoint to PLC");
+    TEST_ASSERT_TRUE(plcValue);
 
     // Change endpoint value to false
     PlcValue newValue(PlcValueType::BOOL);
@@ -140,20 +122,10 @@ void test_input_sync() {
 
     // Check PLC variable updated
     plcValue = memory.getValue<bool>("sensor_value", true);
-    TEST_ASSERT(plcValue == false, "INPUT synced after endpoint change");
+    TEST_ASSERT_FALSE(plcValue);
 }
 
 void test_output_sync() {
-    Serial.println("\n=== Test: OUTPUT Synchronization ===");
-
-    PlcMemory memory;
-    DeviceRegistry& registry = DeviceRegistry::getInstance();
-    registry.clear();
-    memory.clear();
-    memory.begin();
-
-    memory.setDeviceRegistry(&registry);
-
     // Declare PLC variable for output
     memory.declareVariable("relay_state", PlcValueType::BOOL);
     memory.setValue<bool>("relay_state", true); // Set to true
@@ -174,6 +146,7 @@ void test_output_sync() {
         "relay_state",
         "kitchen.wifi.relay.switch1.bool",
         IODirection::IO_OUTPUT,
+        "test_program",
         false, // No function required
         "",
         true
@@ -184,21 +157,11 @@ void test_output_sync() {
 
     // Check endpoint was updated from PLC
     Endpoint* updated = registry.getEndpoint("kitchen.wifi.relay.switch1.bool");
-    TEST_ASSERT(updated != nullptr, "Endpoint exists");
-    TEST_ASSERT(updated->currentValue.value.bVal == true, "OUTPUT synced from PLC to endpoint");
+    TEST_ASSERT_NOT_NULL(updated);
+    TEST_ASSERT_TRUE(updated->currentValue.value.bVal);
 }
 
 void test_function_protected_output() {
-    Serial.println("\n=== Test: Function-Protected OUTPUT ===");
-
-    PlcMemory memory;
-    DeviceRegistry& registry = DeviceRegistry::getInstance();
-    registry.clear();
-    memory.clear();
-    memory.begin();
-
-    memory.setDeviceRegistry(&registry);
-
     // Declare PLC variable for protected output
     memory.declareVariable("critical_relay", PlcValueType::BOOL);
     memory.setValue<bool>("critical_relay", true);
@@ -219,6 +182,7 @@ void test_function_protected_output() {
         "critical_relay",
         "garage.wifi.door.relay.bool",
         IODirection::IO_OUTPUT,
+        "test_program",
         true, // Requires function
         "door_control_function",
         true
@@ -229,21 +193,11 @@ void test_function_protected_output() {
 
     // Check endpoint was NOT updated (still false)
     Endpoint* updated = registry.getEndpoint("garage.wifi.door.relay.bool");
-    TEST_ASSERT(updated != nullptr, "Endpoint exists");
-    TEST_ASSERT(updated->currentValue.value.bVal == false, "Function-protected OUTPUT not auto-synced");
+    TEST_ASSERT_NOT_NULL(updated);
+    TEST_ASSERT_FALSE(updated->currentValue.value.bVal);
 }
 
 void test_offline_endpoint_skip() {
-    Serial.println("\n=== Test: Skip Offline Endpoints ===");
-
-    PlcMemory memory;
-    DeviceRegistry& registry = DeviceRegistry::getInstance();
-    registry.clear();
-    memory.clear();
-    memory.begin();
-
-    memory.setDeviceRegistry(&registry);
-
     // Declare PLC variable
     memory.declareVariable("offline_input", PlcValueType::BOOL);
     memory.setValue<bool>("offline_input", false);
@@ -263,6 +217,7 @@ void test_offline_endpoint_skip() {
         "offline_input",
         "outdoor.zigbee.sensor.temp.real",
         IODirection::IO_INPUT,
+        "test_program",
         false,
         "",
         true
@@ -273,20 +228,10 @@ void test_offline_endpoint_skip() {
 
     // PLC value should NOT change (still false)
     bool plcValue = memory.getValue<bool>("offline_input", true);
-    TEST_ASSERT(plcValue == false, "Offline endpoint skipped during sync");
+    TEST_ASSERT_FALSE(plcValue);
 }
 
 void test_endpoint_online_check() {
-    Serial.println("\n=== Test: Endpoint Online Check ===");
-
-    PlcMemory memory;
-    DeviceRegistry& registry = DeviceRegistry::getInstance();
-    registry.clear();
-    memory.clear();
-    memory.begin();
-
-    memory.setDeviceRegistry(&registry);
-
     // Register online endpoint
     Endpoint onlineEndpoint;
     onlineEndpoint.fullName = "kitchen.wifi.plug.state.bool";
@@ -306,44 +251,20 @@ void test_endpoint_online_check() {
     bool online2 = memory.isEndpointOnline("garage.mesh.sensor.state.bool");
     bool online3 = memory.isEndpointOnline("nonexistent.endpoint");
 
-    TEST_ASSERT(online1 == true, "Online endpoint detected");
-    TEST_ASSERT(online2 == false, "Offline endpoint detected");
-    TEST_ASSERT(online3 == false, "Nonexistent endpoint returns false");
+    TEST_ASSERT_TRUE(online1);
+    TEST_ASSERT_FALSE(online2);
+    TEST_ASSERT_FALSE(online3);
 }
 
-void run_all_tests() {
-    Serial.println("\n");
-    Serial.println("========================================");
-    Serial.println("  PlcMemory IO Points Unit Tests");
-    Serial.println("========================================");
-
-    test_plc_memory_basic();
-    test_io_point_registration();
-    test_input_sync();
-    test_output_sync();
-    test_function_protected_output();
-    test_offline_endpoint_skip();
-    test_endpoint_online_check();
-
-    Serial.println("\n========================================");
-    Serial.printf("  Test Results: %d passed, %d failed\n", tests_passed, tests_failed);
-    Serial.println("========================================\n");
-
-    if (tests_failed == 0) {
-        Serial.println("✅ All tests PASSED!");
-    } else {
-        Serial.printf("❌ %d tests FAILED\n", tests_failed);
-    }
-}
-
-void setup() {
-    Serial.begin(115200);
-    delay(2000);
-
-    Serial.println("\nStarting PlcMemory IO Points tests...\n");
-    run_all_tests();
-}
-
-void loop() {
-    delay(1000);
+int main() {
+    UNITY_BEGIN();
+    RUN_TEST(test_plc_memory_basic);
+    RUN_TEST(test_io_point_registration);
+    RUN_TEST(test_input_sync);
+    RUN_TEST(test_output_sync);
+    RUN_TEST(test_function_protected_output);
+    RUN_TEST(test_offline_endpoint_skip);
+    RUN_TEST(test_endpoint_online_check);
+    UNITY_END();
+    return 0;
 }

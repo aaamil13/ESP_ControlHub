@@ -1,35 +1,29 @@
 #include <Arduino.h>
-#include <PlcMemory.h>
-#include <DeviceRegistry.h>
-#include <blocks/events/BlockStatusHandler.h>
+#include "../../lib/PlcEngine/Engine/PlcMemory.h"
+#include "../../lib/Devices/DeviceRegistry.h"
+#include "../../lib/PlcEngine/Blocks/events/BlockStatusHandler.h"
+#include "../../lib/LocalIO/LocalIOTypes.h" // For IODirection
 #include <ArduinoJson.h>
+#include <unity.h>
 
-// Simple test framework
-int tests_passed = 0;
-int tests_failed = 0;
+// Global instance of DeviceRegistry and PlcMemory for testing
+DeviceRegistry& registry = DeviceRegistry::getInstance();
+PlcMemory memory;
 
-#define TEST_ASSERT(condition, message) \
-    if (condition) { \
-        tests_passed++; \
-        Serial.printf("[PASS] %s\n", message); \
-    } else { \
-        tests_failed++; \
-        Serial.printf("[FAIL] %s\n", message); \
-    }
+void setUp(void) {
+    // set up runs before each test
+    registry.clear(); // Clear registry before each test
+    memory.clear();   // Clear PLC memory before each test
+    memory.begin();   // Initialize PlcMemory
+    memory.setDeviceRegistry(&registry); // Connect PlcMemory to DeviceRegistry
+}
+
+void tearDown(void) {
+    // tear down runs after each test
+}
 
 void test_complete_workflow() {
-    Serial.println("\n=== Integration Test: Complete Workflow ===");
-
-    // Setup
-    DeviceRegistry& registry = DeviceRegistry::getInstance();
-    PlcMemory memory;
-    registry.clear();
-    memory.clear();
-    memory.begin();
-    memory.setDeviceRegistry(&registry);
-
     // Step 1: Register a mesh device endpoint
-    Serial.println("\nStep 1: Registering mesh device endpoint...");
     Endpoint meshEndpoint;
     meshEndpoint.fullName = "garage.mesh.node1.gpio.bool";
     meshEndpoint.location = "garage";
@@ -43,10 +37,9 @@ void test_complete_workflow() {
     meshEndpoint.currentValue.value.bVal = false;
 
     bool endpoint_registered = registry.registerEndpoint(meshEndpoint);
-    TEST_ASSERT(endpoint_registered, "Mesh endpoint registered");
+    TEST_ASSERT_TRUE(endpoint_registered);
 
     // Step 2: Create PLC variables
-    Serial.println("\nStep 2: Creating PLC variables...");
     memory.declareVariable("endpoint_name", PlcValueType::STRING_TYPE);
     memory.declareVariable("node1_online", PlcValueType::BOOL);
     memory.declareVariable("on_node1_online", PlcValueType::BOOL);
@@ -56,22 +49,21 @@ void test_complete_workflow() {
     // Set endpoint name
     memory.setValue<String>("endpoint_name", "garage.mesh.node1.gpio.bool");
 
-    TEST_ASSERT(true, "PLC variables created");
+    // TEST_ASSERT(true, "PLC variables created"); // No assertion needed for variable creation itself
 
     // Step 3: Register IO point for GPIO input
-    Serial.println("\nStep 3: Registering IO point...");
     bool io_registered = memory.registerIOPoint(
         "gpio_input",
         "garage.mesh.node1.gpio.bool",
         IODirection::IO_INPUT,
+        "test_program", // Owner program
         false,
         "",
         true
     );
-    TEST_ASSERT(io_registered, "GPIO IO point registered");
+    TEST_ASSERT_TRUE(io_registered);
 
     // Step 4: Configure StatusHandlerBlock
-    Serial.println("\nStep 4: Configuring StatusHandlerBlock...");
     BlockStatusHandler statusBlock;
     statusBlock.setDeviceRegistry(&registry);
 
@@ -83,22 +75,20 @@ void test_complete_workflow() {
     config["outputs"]["on_offline"] = "on_node1_offline";
 
     bool block_configured = statusBlock.configure(config.as<JsonObject>(), memory);
-    TEST_ASSERT(block_configured, "StatusHandlerBlock configured");
+    TEST_ASSERT_TRUE(block_configured);
 
     // Step 5: First evaluation (device online)
-    Serial.println("\nStep 5: First evaluation (device online)...");
     statusBlock.evaluate(memory);
 
     bool online_status = memory.getValue<bool>("node1_online", false);
-    bool online_trigger = memory.getValue<bool>("on_node1_online", true);
-    bool offline_trigger = memory.getValue<bool>("on_node1_offline", true);
+    bool online_trigger = memory.getValue<bool>("on_node1_online", true); // Default value should be false
+    bool offline_trigger = memory.getValue<bool>("on_node1_offline", true); // Default value should be false
 
-    TEST_ASSERT(online_status == true, "Initial online status detected");
-    TEST_ASSERT(online_trigger == false, "No online trigger on first scan");
-    TEST_ASSERT(offline_trigger == false, "No offline trigger on first scan");
+    TEST_ASSERT_TRUE(online_status);
+    TEST_ASSERT_FALSE(online_trigger);
+    TEST_ASSERT_FALSE(offline_trigger);
 
     // Step 6: Sync GPIO input
-    Serial.println("\nStep 6: Testing GPIO input sync...");
     // Update endpoint GPIO value
     PlcValue gpioValue(PlcValueType::BOOL);
     gpioValue.value.bVal = true;
@@ -108,10 +98,9 @@ void test_complete_workflow() {
     memory.syncIOPoints();
 
     bool gpio_plc_value = memory.getValue<bool>("gpio_input", false);
-    TEST_ASSERT(gpio_plc_value == true, "GPIO input synced to PLC");
+    TEST_ASSERT_TRUE(gpio_plc_value);
 
     // Step 7: Simulate device going offline
-    Serial.println("\nStep 7: Simulating device offline...");
     registry.updateEndpointStatus("garage.mesh.node1.gpio.bool", false);
 
     // Evaluate StatusHandlerBlock again
@@ -120,23 +109,21 @@ void test_complete_workflow() {
     online_status = memory.getValue<bool>("node1_online", true);
     offline_trigger = memory.getValue<bool>("on_node1_offline", false);
 
-    TEST_ASSERT(online_status == false, "Offline status detected");
-    TEST_ASSERT(offline_trigger == true, "Offline trigger activated");
+    TEST_ASSERT_FALSE(online_status);
+    TEST_ASSERT_TRUE(offline_trigger);
 
     // Step 8: Verify offline endpoint not synced
-    Serial.println("\nStep 8: Verify offline endpoint skipped...");
     // Try to sync - should skip offline endpoint
     memory.syncIOPoints();
 
     // GPIO value should not change
     gpio_plc_value = memory.getValue<bool>("gpio_input", false);
-    TEST_ASSERT(gpio_plc_value == true, "Offline endpoint skipped during sync");
+    TEST_ASSERT_TRUE(gpio_plc_value); // Value should remain true as it was skipped
 
     // Step 9: Simulate device coming back online
-    Serial.println("\nStep 9: Simulating device back online...");
     registry.updateEndpointStatus("garage.mesh.node1.gpio.bool", true);
 
-    // Reset triggers (happens after each scan)
+    // Reset triggers (happens after each scan in real PLC, manually here)
     memory.setValue<bool>("on_node1_online", false);
     memory.setValue<bool>("on_node1_offline", false);
 
@@ -146,33 +133,22 @@ void test_complete_workflow() {
     online_status = memory.getValue<bool>("node1_online", false);
     online_trigger = memory.getValue<bool>("on_node1_online", false);
 
-    TEST_ASSERT(online_status == true, "Back online status detected");
-    TEST_ASSERT(online_trigger == true, "Online trigger activated");
+    TEST_ASSERT_TRUE(online_status);
+    TEST_ASSERT_TRUE(online_trigger);
 
     // Step 10: Multiple evaluations without change
-    Serial.println("\nStep 10: Testing stable operation...");
     memory.setValue<bool>("on_node1_online", false); // Reset trigger
 
     statusBlock.evaluate(memory);
     online_trigger = memory.getValue<bool>("on_node1_online", true);
     offline_trigger = memory.getValue<bool>("on_node1_offline", true);
 
-    TEST_ASSERT(online_trigger == false, "No trigger when status unchanged");
-    TEST_ASSERT(offline_trigger == false, "No trigger when status unchanged");
+    TEST_ASSERT_FALSE(online_trigger);
+    TEST_ASSERT_FALSE(offline_trigger);
 }
 
 void test_multi_device_scenario() {
-    Serial.println("\n=== Integration Test: Multi-Device Scenario ===");
-
-    DeviceRegistry& registry = DeviceRegistry::getInstance();
-    PlcMemory memory;
-    registry.clear();
-    memory.clear();
-    memory.begin();
-    memory.setDeviceRegistry(&registry);
-
     // Register multiple devices from different protocols
-    Serial.println("\nRegistering multiple devices...");
 
     // Zigbee temperature sensor
     Endpoint zigbeeTemp;
@@ -212,11 +188,11 @@ void test_multi_device_scenario() {
 
     // Register IO points
     memory.registerIOPoint("bedroom_temp", "bedroom.zigbee.temp_sensor.temperature.real",
-                           IODirection::IO_INPUT, false, "", true);
+                           IODirection::IO_INPUT, "test_program", false, "", true);
     memory.registerIOPoint("motion_detected", "living_room.ble.motion.state.bool",
-                           IODirection::IO_INPUT, false, "", true);
+                           IODirection::IO_INPUT, "test_program", false, "", true);
     memory.registerIOPoint("plug_control", "kitchen.wifi.plug.state.bool",
-                           IODirection::IO_OUTPUT, false, "", true);
+                           IODirection::IO_OUTPUT, "test_program", false, "", true);
 
     // Sync all IO points
     memory.syncIOPoints();
@@ -225,54 +201,31 @@ void test_multi_device_scenario() {
     float temp = memory.getValue<float>("bedroom_temp", 0.0f);
     bool motion = memory.getValue<bool>("motion_detected", true);
 
-    TEST_ASSERT(abs(temp - 22.5f) < 0.01f, "Zigbee temperature input synced");
-    TEST_ASSERT(motion == false, "BLE motion input synced");
+    TEST_ASSERT_EQUAL_FLOAT(22.5f, temp);
+    TEST_ASSERT_FALSE(motion);
 
     // Control output
     memory.setValue<bool>("plug_control", true);
     memory.syncIOPoints();
 
     Endpoint* plugEndpoint = registry.getEndpoint("kitchen.wifi.plug.state.bool");
-    TEST_ASSERT(plugEndpoint->currentValue.value.bVal == true, "WiFi plug output synced");
+    TEST_ASSERT_NOT_NULL(plugEndpoint);
+    TEST_ASSERT_TRUE(plugEndpoint->currentValue.value.bVal);
 
     // Test protocol filtering
     auto zigbeeEndpoints = registry.getEndpointsByProtocol(ProtocolType::ZIGBEE);
     auto bleEndpoints = registry.getEndpointsByProtocol(ProtocolType::BLE);
     auto wifiEndpoints = registry.getEndpointsByProtocol(ProtocolType::WIFI);
 
-    TEST_ASSERT(zigbeeEndpoints.size() == 1, "1 Zigbee endpoint found");
-    TEST_ASSERT(bleEndpoints.size() == 1, "1 BLE endpoint found");
-    TEST_ASSERT(wifiEndpoints.size() == 1, "1 WiFi endpoint found");
+    TEST_ASSERT_EQUAL_UINT(1, zigbeeEndpoints.size());
+    TEST_ASSERT_EQUAL_UINT(1, bleEndpoints.size());
+    TEST_ASSERT_EQUAL_UINT(1, wifiEndpoints.size());
 }
 
-void run_all_tests() {
-    Serial.println("\n");
-    Serial.println("========================================");
-    Serial.println("  Integration Tests");
-    Serial.println("========================================");
-
-    test_complete_workflow();
-    test_multi_device_scenario();
-
-    Serial.println("\n========================================");
-    Serial.printf("  Test Results: %d passed, %d failed\n", tests_passed, tests_failed);
-    Serial.println("========================================\n");
-
-    if (tests_failed == 0) {
-        Serial.println("✅ All integration tests PASSED!");
-    } else {
-        Serial.printf("❌ %d tests FAILED\n", tests_failed);
-    }
-}
-
-void setup() {
-    Serial.begin(115200);
-    delay(2000);
-
-    Serial.println("\nStarting Integration Tests...\n");
-    run_all_tests();
-}
-
-void loop() {
-    delay(1000);
+int main() {
+    UNITY_BEGIN();
+    RUN_TEST(test_complete_workflow);
+    RUN_TEST(test_multi_device_scenario);
+    UNITY_END();
+    return 0;
 }

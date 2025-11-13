@@ -41,15 +41,15 @@ enum class IOPinType : uint8_t {
 // ============================================================================
 
 enum class DigitalInputMode : uint8_t {
-    INPUT,                      // High impedance input
-    INPUT_PULLUP,               // Input with internal pullup
-    INPUT_PULLDOWN              // Input with internal pulldown
+    MODE_INPUT,                      // High impedance input
+    MODE_INPUT_PULLUP,               // Input with internal pullup
+    MODE_INPUT_PULLDOWN              // Input with internal pulldown
 };
 
 enum class DigitalInputEdge : uint8_t {
     NONE,                       // No edge detection
-    RISING,                     // Rising edge
-    FALLING,                    // Falling edge
+    EDGE_RISING,                     // Rising edge
+    EDGE_FALLING,                    // Falling edge
     BOTH                        // Both edges
 };
 
@@ -62,7 +62,7 @@ struct DigitalInputConfig {
     DigitalInputEdge edgeDetect;// Edge detection mode
 
     DigitalInputConfig()
-        : pin(0), mode(DigitalInputMode::INPUT),
+        : pin(0), mode(DigitalInputMode::MODE_INPUT),
           invert(false), debounceMs(50), filterSamples(0),
           edgeDetect(DigitalInputEdge::NONE) {}
 };
@@ -158,7 +158,7 @@ struct PWMOutputConfig {
 // ============================================================================
 
 enum class PulseCounterEdge : uint8_t {
-    RISING,                     // Count rising edges
+    EDGE_RISING,                     // Count rising edges
     FALLING,                    // Count falling edges
     BOTH                        // Count both edges
 };

@@ -1,32 +1,30 @@
-#include <Arduino.h>
-#include <DeviceRegistry.h>
-#include <PlcMemory.h>
+/ru#include <Arduino.h>
+#include "../../lib/Devices/DeviceRegistry.h"
+#include "../../lib/PlcEngine/Engine/PlcMemory.h"
+#include "../../lib/LocalIO/LocalIOTypes.h" // For IODirection
+#include <unity.h> // Include Unity framework
 
-// Simple test framework for embedded
-int tests_passed = 0;
-int tests_failed = 0;
+// Global instance of DeviceRegistry for testing
+DeviceRegistry& registry = DeviceRegistry::getInstance();
 
-#define TEST_ASSERT(condition, message) \
-    if (condition) { \
-        tests_passed++; \
-        Serial.printf("[PASS] %s\n", message); \
-    } else { \
-        tests_failed++; \
-        Serial.printf("[FAIL] %s\n", message); \
-    }
+void setUp(void) {
+    // set up runs before each test
+    registry.clear(); // Clear registry before each test
+}
+
+void tearDown(void) {
+    // tear down runs after each test
+}
 
 void test_device_registry_singleton() {
-    Serial.println("\n=== Test: DeviceRegistry Singleton ===");
-
+    TEST_MESSAGE("\n=== Test: DeviceRegistry Singleton ===");
     DeviceRegistry& registry1 = DeviceRegistry::getInstance();
     DeviceRegistry& registry2 = DeviceRegistry::getInstance();
-
-    TEST_ASSERT(&registry1 == &registry2, "Singleton returns same instance");
+    TEST_ASSERT_EQUAL_PTR(&registry1, &registry2);
 }
 
 void test_endpoint_registration() {
-    Serial.println("\n=== Test: Endpoint Registration ===");
-
+    TEST_MESSAGE("\n=== Test: Endpoint Registration ===");
     DeviceRegistry& registry = DeviceRegistry::getInstance();
     registry.clear(); // Start fresh
 
@@ -44,23 +42,22 @@ void test_endpoint_registration() {
 
     // Register endpoint
     bool registered = registry.registerEndpoint(testEndpoint);
-    TEST_ASSERT(registered, "Endpoint registered successfully");
+    TEST_ASSERT_TRUE(registered);
 
     // Retrieve endpoint
     Endpoint* retrieved = registry.getEndpoint("kitchen.zigbee.relay.switch1.bool");
-    TEST_ASSERT(retrieved != nullptr, "Endpoint can be retrieved");
-    TEST_ASSERT(retrieved->location == "kitchen", "Endpoint location correct");
-    TEST_ASSERT(retrieved->protocol == ProtocolType::ZIGBEE, "Endpoint protocol correct");
-    TEST_ASSERT(retrieved->isOnline == true, "Endpoint is online");
+    TEST_ASSERT_NOT_NULL(retrieved);
+    TEST_ASSERT_EQUAL_STRING("kitchen", retrieved->location.c_str());
+    TEST_ASSERT_EQUAL(ProtocolType::ZIGBEE, retrieved->protocol);
+    TEST_ASSERT_TRUE(retrieved->isOnline);
 
     // Try to register same endpoint again (should fail or update)
     bool registered_again = registry.registerEndpoint(testEndpoint);
-    TEST_ASSERT(registered_again == false, "Duplicate endpoint registration fails");
+    TEST_ASSERT_FALSE(registered_again);
 }
 
 void test_device_registration() {
-    Serial.println("\n=== Test: Device Registration ===");
-
+    TEST_MESSAGE("\n=== Test: Device Registration ===");
     DeviceRegistry& registry = DeviceRegistry::getInstance();
     registry.clear();
 
@@ -74,18 +71,17 @@ void test_device_registration() {
 
     // Register device
     bool registered = registry.registerDevice(testDevice);
-    TEST_ASSERT(registered, "Device registered successfully");
+    TEST_ASSERT_TRUE(registered);
 
     // Retrieve device
     DeviceStatus* retrieved = registry.getDevice("kitchen.zigbee.relay");
-    TEST_ASSERT(retrieved != nullptr, "Device can be retrieved");
-    TEST_ASSERT(retrieved->isOnline == true, "Device is online");
-    TEST_ASSERT(retrieved->offlineThreshold == 60000, "Device offline threshold correct");
+    TEST_ASSERT_NOT_NULL(retrieved);
+    TEST_ASSERT_TRUE(retrieved->isOnline);
+    TEST_ASSERT_EQUAL_UINT32(60000, retrieved->offlineThreshold);
 }
 
 void test_status_updates() {
-    Serial.println("\n=== Test: Status Updates ===");
-
+    TEST_MESSAGE("\n=== Test: Status Updates ===");
     DeviceRegistry& registry = DeviceRegistry::getInstance();
     registry.clear();
 
@@ -107,17 +103,16 @@ void test_status_updates() {
 
     // Check status changed
     Endpoint* updated = registry.getEndpoint("garage.mesh.node1.gpio.bool");
-    TEST_ASSERT(updated->isOnline == false, "Endpoint status updated to offline");
+    TEST_ASSERT_FALSE(updated->isOnline);
 
     // Update back to online
     registry.updateEndpointStatus("garage.mesh.node1.gpio.bool", true);
     updated = registry.getEndpoint("garage.mesh.node1.gpio.bool");
-    TEST_ASSERT(updated->isOnline == true, "Endpoint status updated to online");
+    TEST_ASSERT_TRUE(updated->isOnline);
 }
 
 void test_endpoint_value_updates() {
-    Serial.println("\n=== Test: Endpoint Value Updates ===");
-
+    TEST_MESSAGE("\n=== Test: Endpoint Value Updates ===");
     DeviceRegistry& registry = DeviceRegistry::getInstance();
     registry.clear();
 
@@ -140,14 +135,13 @@ void test_endpoint_value_updates() {
 
     // Check value updated
     Endpoint* updated = registry.getEndpoint("bedroom.ble.temp_sensor.temperature.real");
-    TEST_ASSERT(updated != nullptr, "Endpoint exists");
-    TEST_ASSERT(updated->currentValue.type == PlcValueType::REAL, "Value type correct");
-    TEST_ASSERT(abs(updated->currentValue.value.fVal - 23.5f) < 0.01f, "Value updated correctly");
+    TEST_ASSERT_NOT_NULL(updated);
+    TEST_ASSERT_EQUAL(PlcValueType::REAL, updated->currentValue.type);
+    TEST_ASSERT_EQUAL_FLOAT(23.5f, updated->currentValue.value.fVal);
 }
 
 void test_io_point_registration() {
-    Serial.println("\n=== Test: IO Point Registration ===");
-
+    TEST_MESSAGE("\n=== Test: IO Point Registration ===");
     DeviceRegistry& registry = DeviceRegistry::getInstance();
     registry.clear();
 
@@ -161,27 +155,26 @@ void test_io_point_registration() {
 
     // Register IO point
     bool registered = registry.registerIOPoint(ioPoint);
-    TEST_ASSERT(registered, "IO point registered successfully");
+    TEST_ASSERT_TRUE(registered);
 
     // Retrieve IO point
     PlcIOPoint* retrieved = registry.getIOPoint("gpio_input");
-    TEST_ASSERT(retrieved != nullptr, "IO point can be retrieved");
-    TEST_ASSERT(retrieved->mappedEndpoint == "garage.mesh.node1.gpio.bool", "IO point endpoint correct");
-    TEST_ASSERT(retrieved->direction == IODirection::IO_INPUT, "IO point direction correct");
-    TEST_ASSERT(retrieved->autoSync == true, "IO point auto-sync enabled");
+    TEST_ASSERT_NOT_NULL(retrieved);
+    TEST_ASSERT_EQUAL_STRING("garage.mesh.node1.gpio.bool", retrieved->mappedEndpoint.c_str());
+    TEST_ASSERT_EQUAL(IODirection::IO_INPUT, retrieved->direction);
+    TEST_ASSERT_TRUE(retrieved->autoSync);
 
     // Unregister IO point
     bool unregistered = registry.unregisterIOPoint("gpio_input");
-    TEST_ASSERT(unregistered, "IO point unregistered successfully");
+    TEST_ASSERT_TRUE(unregistered);
 
     // Verify it's gone
     PlcIOPoint* after_unreg = registry.getIOPoint("gpio_input");
-    TEST_ASSERT(after_unreg == nullptr, "IO point no longer exists after unregister");
+    TEST_ASSERT_NULL(after_unreg);
 }
 
 void test_protocol_filtering() {
-    Serial.println("\n=== Test: Protocol Filtering ===");
-
+    TEST_MESSAGE("\n=== Test: Protocol Filtering ===");
     DeviceRegistry& registry = DeviceRegistry::getInstance();
     registry.clear();
 
@@ -203,20 +196,19 @@ void test_protocol_filtering() {
 
     // Get Zigbee endpoints
     auto zigbeeEndpoints = registry.getEndpointsByProtocol(ProtocolType::ZIGBEE);
-    TEST_ASSERT(zigbeeEndpoints.size() == 2, "Found 2 Zigbee endpoints");
+    TEST_ASSERT_EQUAL_UINT(2, zigbeeEndpoints.size());
 
     // Get Mesh endpoints
     auto meshEndpoints = registry.getEndpointsByProtocol(ProtocolType::MESH);
-    TEST_ASSERT(meshEndpoints.size() == 1, "Found 1 Mesh endpoint");
+    TEST_ASSERT_EQUAL_UINT(1, meshEndpoints.size());
 
     // Get BLE endpoints (should be empty)
     auto bleEndpoints = registry.getEndpointsByProtocol(ProtocolType::BLE);
-    TEST_ASSERT(bleEndpoints.size() == 0, "Found 0 BLE endpoints");
+    TEST_ASSERT_EQUAL_UINT(0, bleEndpoints.size());
 }
 
 void test_location_filtering() {
-    Serial.println("\n=== Test: Location Filtering ===");
-
+    TEST_MESSAGE("\n=== Test: Location Filtering ===");
     DeviceRegistry& registry = DeviceRegistry::getInstance();
     registry.clear();
 
@@ -238,48 +230,23 @@ void test_location_filtering() {
 
     // Get kitchen endpoints
     auto kitchenEndpoints = registry.getEndpointsByLocation("kitchen");
-    TEST_ASSERT(kitchenEndpoints.size() == 2, "Found 2 kitchen endpoints");
+    TEST_ASSERT_EQUAL_UINT(2, kitchenEndpoints.size());
 
     // Get garage endpoints
     auto garageEndpoints = registry.getEndpointsByLocation("garage");
-    TEST_ASSERT(garageEndpoints.size() == 1, "Found 1 garage endpoint");
+    TEST_ASSERT_EQUAL_UINT(1, garageEndpoints.size());
 }
 
-void run_all_tests() {
-    Serial.println("\n");
-    Serial.println("========================================");
-    Serial.println("  DeviceRegistry Unit Tests");
-    Serial.println("========================================");
-
-    test_device_registry_singleton();
-    test_endpoint_registration();
-    test_device_registration();
-    test_status_updates();
-    test_endpoint_value_updates();
-    test_io_point_registration();
-    test_protocol_filtering();
-    test_location_filtering();
-
-    Serial.println("\n========================================");
-    Serial.printf("  Test Results: %d passed, %d failed\n", tests_passed, tests_failed);
-    Serial.println("========================================\n");
-
-    if (tests_failed == 0) {
-        Serial.println("✅ All tests PASSED!");
-    } else {
-        Serial.printf("❌ %d tests FAILED\n", tests_failed);
-    }
-}
-
-void setup() {
-    Serial.begin(115200);
-    delay(2000); // Wait for serial monitor
-
-    Serial.println("\nStarting DeviceRegistry tests...\n");
-    run_all_tests();
-}
-
-void loop() {
-    // Tests run once in setup()
-    delay(1000);
+int main() {
+    UNITY_BEGIN();
+    RUN_TEST(test_device_registry_singleton);
+    RUN_TEST(test_endpoint_registration);
+    RUN_TEST(test_device_registration);
+    RUN_TEST(test_status_updates);
+    RUN_TEST(test_endpoint_value_updates);
+    RUN_TEST(test_io_point_registration);
+    RUN_TEST(test_protocol_filtering);
+    RUN_TEST(test_location_filtering);
+    UNITY_END();
+    return 0;
 }
