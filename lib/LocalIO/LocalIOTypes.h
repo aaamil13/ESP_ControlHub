@@ -142,58 +142,6 @@ struct AnalogOutputConfig {
 // ============================================================================
 
 struct PWMOutputConfig {
-    uint8_t pin;
-    uint16_t frequency;         // PWM frequency in Hz
-    uint8_t resolution;         // Resolution in bits (1-16)
-    uint8_t channel;            // LEDC channel (0-15)
-    float initialDutyCycle;     // Initial duty cycle (0.0-100.0%)
-
-    PWMOutputConfig()
-        : pin(0), frequency(1000), resolution(10),
-          channel(0), initialDutyCycle(0.0f) {}
-};
-
-// ============================================================================
-// Pulse Counter Configuration
-// ============================================================================
-
-enum class PulseCounterEdge : uint8_t {
-    EDGE_RISING,                     // Count rising edges
-    FALLING,                    // Count falling edges
-    BOTH                        // Count both edges
-};
-
-enum class PulseCounterMode : uint8_t {
-    COUNTER,                    // Simple counter
-    FREQUENCY,                  // Measure frequency
-    PERIOD                      // Measure period
-};
-
-struct PulseCounterConfig {
-    uint8_t pin;
-    PulseCounterEdge edge;
-    PulseCounterMode mode;
-    uint16_t sampleWindowMs;    // Sample window for frequency measurement
-    bool enableFilter;          // Enable glitch filter
-    uint16_t filterThresholdNs; // Glitch filter threshold in nanoseconds
-
-    PulseCounterConfig()
-        : pin(0), edge(PulseCounterEdge::RISING),
-          mode(PulseCounterMode::COUNTER), sampleWindowMs(1000),
-          enableFilter(true), filterThresholdNs(1000) {}
-};
-
-// ============================================================================
-// Touch Sensor Configuration
-// ============================================================================
-
-struct TouchSensorConfig {
-    uint8_t pin;                // Touch pin (T0-T9)
-    uint16_t threshold;         // Touch threshold value
-    uint8_t filterSamples;      // Number of samples for filtering
-
-    TouchSensorConfig()
-        : pin(0), threshold(40), filterSamples(10) {}
 };
 
 // ============================================================================

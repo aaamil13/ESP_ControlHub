@@ -146,9 +146,11 @@ public:
     // Clear all data
     void clear();
 
-private:
+protected:
     DeviceRegistry();
-    ~DeviceRegistry();
+    virtual ~DeviceRegistry();
+
+private:
     DeviceRegistry(const DeviceRegistry&) = delete;
     DeviceRegistry& operator=(const DeviceRegistry&) = delete;
 

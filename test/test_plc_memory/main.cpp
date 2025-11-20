@@ -352,7 +352,7 @@ void test_string_length_limit() {
 }
 
 
-int main() {
+void setup() {
     UNITY_BEGIN();
     RUN_TEST(test_declare_variable_bool);
     RUN_TEST(test_declare_variable_int);
@@ -375,5 +375,6 @@ int main() {
     RUN_TEST(test_string_length_limit);
 
     UNITY_END();
-    return 0;
 }
+
+void loop() {}
