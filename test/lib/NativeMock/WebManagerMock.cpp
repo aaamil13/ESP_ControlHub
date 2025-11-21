@@ -1,7 +1,8 @@
 #include <WebManager.h>
 
 WebManager::WebManager(PlcEngine* plcEngine, MeshDeviceManager* meshDeviceManager, ZigbeeManager* zigbeeManager) 
-    : _plcEngine(plcEngine), _meshDeviceManager(meshDeviceManager), _zigbeeManager(zigbeeManager), server(80), ws("/ws") {
+    : AsyncWebServer(80), ws("/ws"), _plcEngine(plcEngine), _meshDeviceManager(meshDeviceManager), _zigbeeManager(zigbeeManager) {
+    instance = this;
 }
 
 void WebManager::log(const String& message) {

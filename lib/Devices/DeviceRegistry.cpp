@@ -19,7 +19,7 @@ DeviceRegistry::~DeviceRegistry() {
 // ==================== Endpoint Management ====================
 
 bool DeviceRegistry::registerEndpoint(const Endpoint& endpoint) {
-    if (endpoint.fullName.isEmpty()) {
+    if (endpoint.fullName.length() == 0) {
         EspHubLog->println("ERROR: Cannot register endpoint with empty name");
         return false;
     }
@@ -30,7 +30,7 @@ bool DeviceRegistry::registerEndpoint(const Endpoint& endpoint) {
                      endpoint.isWritable);
 
     // Add endpoint to device's endpoint list
-    if (!endpoint.deviceId.isEmpty()) {
+    if (endpoint.deviceId.length() > 0) {
         String deviceFullId = endpoint.location + "." +
                              protocolToString(endpoint.protocol) + "." +
                              endpoint.deviceId;
@@ -149,7 +149,7 @@ void DeviceRegistry::checkOfflineDevices(uint32_t timeout_ms) {
 // ==================== Device Management ====================
 
 bool DeviceRegistry::registerDevice(const DeviceStatus& device) {
-    if (device.deviceId.isEmpty()) {
+    if (device.deviceId.length() == 0) {
         EspHubLog->println("ERROR: Cannot register device with empty ID");
         return false;
     }
@@ -187,7 +187,7 @@ void DeviceRegistry::updateDeviceStatus(const String& deviceId, bool isOnline) {
 // ==================== PLC IO Points ====================
 
 bool DeviceRegistry::registerIOPoint(const PlcIOPoint& ioPoint) {
-    if (ioPoint.plcVarName.isEmpty() || ioPoint.mappedEndpoint.isEmpty()) {
+    if (ioPoint.plcVarName.length() == 0 || ioPoint.mappedEndpoint.length() == 0) {
         EspHubLog->println("ERROR: Cannot register IO point with empty names");
         return false;
     }
