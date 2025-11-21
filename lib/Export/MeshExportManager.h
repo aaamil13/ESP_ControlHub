@@ -3,7 +3,25 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#ifndef UNIT_TEST
 #include <painlessMesh.h>
+#else
+#ifndef PAINLESS_MESH_DUMMY
+#define PAINLESS_MESH_DUMMY
+class painlessMesh {
+public:
+    void update() {}
+    void sendBroadcast(String msg) {}
+    void sendSingle(uint32_t dest, String msg) {}
+    void init(String ssid, String password, uint16_t port) {}
+    void onReceive(std::function<void(uint32_t, String&)>) {}
+    void onNewConnection(std::function<void(uint32_t)>) {}
+    void onChangedConnections(std::function<void()>) {}
+    void onNodeTimeAdjusted(std::function<void(int32_t)>) {}
+    uint32_t getNodeId() { return 0; }
+};
+#endif
+#endif
 #include <map>
 #include <vector>
 #include <functional>

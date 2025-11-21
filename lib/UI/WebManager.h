@@ -2,18 +2,67 @@
 #define WEB_MANAGER_H
 
 #include <Arduino.h>
+#include <ArduinoJson.h>
+#include <functional>
+
+#ifndef UNIT_TEST
 #include <ESPAsyncWebServer.h>
 #include <AsyncWebSocket.h>
-#include "../PlcEngine/Engine/PlcEngine.h" // For PLC config upload
-#include "../Protocols/Mesh/MeshDeviceManager.h" // For mesh device monitoring
-#include "../Protocols/Zigbee/ZigbeeManager.h" // For Zigbee device monitoring
-#include "../Core/ModuleManager.h" // For module management
+#else
+// Dummy classes for Unit Testing
+#include <FS.h>
+#include <LittleFS.h>
 
-class WebManager {
+#define HTTP_GET 0
+#define HTTP_POST 1
+#define HTTP_ANY 2
+#define WS_TEXT 1
+
+struct AwsFrameInfo {
+    bool final;
+    uint8_t index;
+    uint64_t len;
+    uint8_t opcode;
+};
+
+class AsyncWebParameter {
 public:
-    WebManager(PlcEngine* plcEngine, MeshDeviceManager* meshDeviceManager, ZigbeeManager* zigbeeManager = nullptr);
-    void begin();
-    void log(const String& message);
+    String value() { return ""; }
+};
+
+class AsyncWebServerRequest {
+public:
+    void send(int code, const char* contentType, const String& content) {}
+    template <typename T>
+    void send(T& fs, const char* path, const char* contentType, bool download = false) {}
+    String url() { return ""; }
+    bool hasParam(const String& name, bool post = false, bool file = false) { return false; }
+    AsyncWebParameter* getParam(const String& name, bool post = false, bool file = false) { return new AsyncWebParameter(); }
+};
+
+class AsyncWebSocketClient {
+public:
+    void text(const String& message) {}
+    uint32_t id() { return 0; }
+    IPAddress remoteIP() { return IPAddress(0,0,0,0); }
+};
+
+enum AwsEventType { WS_EVT_CONNECT, WS_EVT_DISCONNECT, WS_EVT_PONG, WS_EVT_ERROR, WS_EVT_DATA };
+
+class AsyncWebSocket {
+public:
+    AsyncWebSocket(const char* url) {}
+    template <typename T>
+    void onEvent(T callback) {}
+    void cleanupClients() {}
+    void textAll(const char* message) {}
+    void textAll(const String& message) {}
+};
+
+class AsyncWebServer {
+public:
+    AsyncWebServer(int port) {}
+    void on(const char* uri, int method, std::function<void(AsyncWebServerRequest *request)> callback) {}
     AsyncWebServer& getServer() { return server; } // Expose server instance
     void setZigbeeManager(ZigbeeManager* manager) { _zigbeeManager = manager; }
     void setModuleManager(ModuleManager* manager) { _moduleManager = manager; }

@@ -2,7 +2,38 @@
 #define ESP_HUB_LIB_H
 
 #include <Arduino.h>
+#ifndef UNIT_TEST
 #include <painlessMesh.h>
+#else
+#ifndef PAINLESS_MESH_DUMMY
+#define PAINLESS_MESH_DUMMY
+class Scheduler {
+public:
+    void addTask(void* task) {}
+    void startNow() {}
+};
+extern Scheduler meshScheduler;
+
+#define ERROR 1
+#define STARTUP 2
+
+class painlessMesh {
+public:
+    void update() {}
+    void setDebugMsgTypes(uint32_t types) {}
+    void sendBroadcast(String msg) {}
+    void sendSingle(uint32_t dest, String msg) {}
+    void init(String ssid, String password, Scheduler* scheduler, uint16_t port) {}
+    void onReceive(std::function<void(uint32_t, String&)>) {}
+    void onNewConnection(std::function<void(uint32_t)>) {}
+    void onChangedConnections(std::function<void()>) {}
+    void onNodeTimeAdjusted(std::function<void(int32_t)>) {}
+    uint32_t getNodeId() { return 0; }
+    bool isRoot() { return true; }
+    uint32_t getNodeTime() { return 0; }
+};
+#endif
+#endif
 #include "../Protocols/Mqtt/MqttManager.h"
 #include "../PlcEngine/Engine/PlcEngine.h"
 #include "../UI/WebManager.h"

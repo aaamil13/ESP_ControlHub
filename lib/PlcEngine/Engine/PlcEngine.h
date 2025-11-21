@@ -18,11 +18,12 @@ namespace std {
     }
 }
 #endif
+
 #include "../../Core/TimeManager.h" // For scheduler blocks
-#include "../../Protocols/Mesh/MeshDeviceManager.h" // For sending commands to mesh devices
+class MeshDeviceManager; // Forward declaration
 #include "../PlcEngine/Engine/PlcProgram.h" // New PlcProgram class
 
-enum class PlcEngineState { // Renamed to avoid conflict
+enum class PlcEngineState {
     STOPPED,
     RUNNING
 };
@@ -36,7 +37,7 @@ public:
     void pauseProgram(const String& programName);
     void stopProgram(const String& programName);
     void deleteProgram(const String& programName);
-    PlcEngineState getEngineState() const { return currentEngineState; } // Renamed
+    PlcEngineState getEngineState() const { return currentEngineState; }
     PlcProgram* getProgram(const String& programName);
     std::vector<String> getProgramNames() const;
     PlcMemory& getMemory() { return programs.at("main_program")->getMemory(); } // Expose PlcMemory for external access
@@ -46,12 +47,12 @@ public:
 
 private:
     std::map<String, std::unique_ptr<PlcProgram>> programs;
-    PlcEngineState currentEngineState; // Renamed
-    TaskHandle_t plcEngineTaskHandle; // Renamed
+    PlcEngineState currentEngineState;
+    TaskHandle_t plcEngineTaskHandle;
     TimeManager* _timeManager;
     MeshDeviceManager* _meshDeviceManager;
 
-    static void plcEngineTask(void* parameter); // Renamed
+    static void plcEngineTask(void* parameter);
 };
 
 #endif // PLC_ENGINE_H
